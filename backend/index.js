@@ -19,7 +19,19 @@ app.use(
 )
 app.use(express.json())
 
-function userToClient(u) {
+function locationToClient(l) {
+  return {
+    id: l.id,
+    name: l.name,
+    addressLine: l.addressLine,
+    city: l.city,
+    region: l.region,
+    country: l.country,
+    isPrimary: Boolean(l.isPrimary),
+  }
+}
+
+function userToClient(u, locations = []) {
   let products = []
   try {
     products = JSON.parse(u.productIds)
@@ -36,7 +48,30 @@ function userToClient(u) {
     createdAt: u.createdAt instanceof Date ? u.createdAt.toISOString() : u.createdAt,
     lastLoginAt:
       u.lastLoginAt instanceof Date ? u.lastLoginAt.toISOString() : u.lastLoginAt ?? null,
+    locations: locations.map(locationToClient),
   }
+}
+
+async function ensureDefaultLocation(user) {
+  const n = await prisma.location.count({ where: { userId: user.id } })
+  if (n === 0) {
+    await prisma.location.create({
+      data: {
+        userId: user.id,
+        name: `${user.company} — Main site`,
+        isPrimary: true,
+      },
+    })
+  }
+}
+
+async function clientUserPayload(user) {
+  await ensureDefaultLocation(user)
+  const locations = await prisma.location.findMany({
+    where: { userId: user.id },
+    orderBy: [{ isPrimary: 'desc' }, { name: 'asc' }],
+  })
+  return userToClient(user, locations)
 }
 
 app.get('/api/health', (_req, res) => {
@@ -92,13 +127,17 @@ app.post('/api/auth/register', async (req, res) => {
         slug: 'generic',
         planId: plan,
         productIds: JSON.stringify(ids),
+        locations: {
+          create: [{ name: `${companyName} — Main site`, isPrimary: true }],
+        },
       },
     })
     const token = signUserToken(user.id)
+    const payload = await clientUserPayload(user)
     res.status(201).json({
       ok: true,
       token,
-      user: userToClient(user),
+      user: payload,
     })
   } catch (e) {
     if (e.code === 'P2002') {
@@ -132,7 +171,8 @@ app.post('/api/auth/login', async (req, res) => {
       data: { lastLoginAt: new Date() },
     })
     const token = signUserToken(user.id)
-    res.json({ ok: true, token, user: userToClient(refreshed) })
+    const payload = await clientUserPayload(refreshed)
+    res.json({ ok: true, token, user: payload })
   } catch (e) {
     console.error(e)
     res.status(500).json({ ok: false, message: 'Sign in failed.' })
@@ -149,10 +189,52 @@ app.get('/api/auth/me', async (req, res) => {
     if (!user) {
       return res.status(401).json({ ok: false, message: 'Session invalid.' })
     }
-    res.json({ ok: true, user: userToClient(user) })
+    const payload = await clientUserPayload(user)
+    res.json({ ok: true, user: payload })
   } catch (e) {
     console.error(e)
     res.status(500).json({ ok: false, message: 'Could not load profile.' })
+  }
+})
+
+app.post('/api/locations', async (req, res) => {
+  const userId = readBearerUserId(req)
+  if (!userId) {
+    return res.status(401).json({ ok: false, message: 'Not signed in.' })
+  }
+  const { name, addressLine, city, region, country, isPrimary } = req.body || {}
+  const nameTrim = String(name || '').trim()
+  if (!nameTrim || nameTrim.length > 120) {
+    return res.status(400).json({ ok: false, message: 'Location name is required (max 120 characters).' })
+  }
+
+  try {
+    if (isPrimary === true) {
+      await prisma.location.updateMany({
+        where: { userId },
+        data: { isPrimary: false },
+      })
+    }
+    await prisma.location.create({
+      data: {
+        userId,
+        name: nameTrim,
+        addressLine: addressLine ? String(addressLine).trim().slice(0, 200) : null,
+        city: city ? String(city).trim().slice(0, 100) : null,
+        region: region ? String(region).trim().slice(0, 100) : null,
+        country: country ? String(country).trim().slice(0, 100) : null,
+        isPrimary: Boolean(isPrimary),
+      },
+    })
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    if (!user) {
+      return res.status(401).json({ ok: false, message: 'Session invalid.' })
+    }
+    const payload = await clientUserPayload(user)
+    res.status(201).json({ ok: true, user: payload })
+  } catch (e) {
+    console.error(e)
+    res.status(500).json({ ok: false, message: 'Could not add location.' })
   }
 })
 

@@ -14,6 +14,17 @@ import aboutHenryImage from './assets/about-henry.png'
 
 function mapUserFromApi(user) {
   if (!user || typeof user.email !== 'string') return null
+  const locations = Array.isArray(user.locations)
+    ? user.locations.map((l) => ({
+        id: l.id,
+        name: l.name,
+        addressLine: l.addressLine ?? null,
+        city: l.city ?? null,
+        region: l.region ?? null,
+        country: l.country ?? null,
+        isPrimary: Boolean(l.isPrimary),
+      }))
+    : []
   return {
     email: user.email,
     company: user.company,
@@ -26,6 +37,7 @@ function mapUserFromApi(user) {
         : null,
     createdAt: typeof user.createdAt === 'string' ? user.createdAt : null,
     lastLoginAt: typeof user.lastLoginAt === 'string' ? user.lastLoginAt : null,
+    locations,
   }
 }
 
@@ -335,6 +347,18 @@ function App() {
     setCurrentUser(null)
   }
 
+  const refreshCurrentUser = async () => {
+    if (!getToken()) return
+    try {
+      const data = await apiJson('/api/auth/me')
+      const u = mapUserFromApi(data.user)
+      if (u) setCurrentUser(u)
+    } catch {
+      clearAuth()
+      setCurrentUser(null)
+    }
+  }
+
   const updateField = (event) => {
     const { name, value } = event.target
     setForm((current) => ({ ...current, [name]: value }))
@@ -472,7 +496,7 @@ function App() {
   if (currentUser) {
     return (
       <div className="page page--client">
-        <ClientDashboard user={currentUser} onSignOut={signOut} />
+        <ClientDashboard user={currentUser} onSignOut={signOut} onProfileRefresh={refreshCurrentUser} />
       </div>
     )
   }
