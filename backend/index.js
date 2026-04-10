@@ -33,6 +33,9 @@ function userToClient(u) {
     slug: u.slug,
     products,
     planId: u.planId,
+    createdAt: u.createdAt instanceof Date ? u.createdAt.toISOString() : u.createdAt,
+    lastLoginAt:
+      u.lastLoginAt instanceof Date ? u.lastLoginAt.toISOString() : u.lastLoginAt ?? null,
   }
 }
 
@@ -124,12 +127,12 @@ app.post('/api/auth/login', async (req, res) => {
     if (!ok) {
       return res.status(401).json({ ok: false, message: 'Email or password does not match.' })
     }
-    await prisma.user.update({
+    const refreshed = await prisma.user.update({
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
     })
     const token = signUserToken(user.id)
-    res.json({ ok: true, token, user: userToClient(user) })
+    res.json({ ok: true, token, user: userToClient(refreshed) })
   } catch (e) {
     console.error(e)
     res.status(500).json({ ok: false, message: 'Sign in failed.' })

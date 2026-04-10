@@ -1,6 +1,26 @@
 import { useState } from 'react'
 import { titlesForProductIds } from './productCatalog.js'
 
+function displayNameFromEmail(email) {
+  const local = String(email).split('@')[0]?.replace(/[.+_]/g, ' ').trim() || 'there'
+  return local
+    .split(/\s+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ')
+}
+
+function formatSessionDate(iso) {
+  if (!iso) return '—'
+  try {
+    return new Date(iso).toLocaleString(undefined, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    })
+  } catch {
+    return '—'
+  }
+}
+
 const SUBSCRIPTION_PLAN_LABEL = {
   basic: 'Basic · $150/mo',
   plus: 'Plus · $200/mo',
@@ -93,10 +113,30 @@ const WORKSPACE = {
   ],
 }
 
+const NAV_ITEMS = [
+  { id: 'dashboard', label: 'Dashboard' },
+  { id: 'alerts', label: 'AI Alerts' },
+  { id: 'reports', label: 'Reports' },
+  { id: 'insights', label: 'Insights' },
+  { id: 'account', label: 'Account' },
+]
+
+const TAB_HEADINGS = {
+  dashboard: { title: null, sub: null },
+  alerts: { title: 'AI Alerts', sub: 'Unacknowledged items and escalation status for your lines.' },
+  reports: { title: 'Reports', sub: 'Shift summaries, quality, and labor rollups — export or schedule digests.' },
+  insights: { title: 'Insights', sub: 'Correlations, forecasts, and what changed — with citations to the floor.' },
+  account: { title: 'Account', sub: 'Your workspace profile and subscription context.' },
+}
+
 export default function ClientDashboard({ user, onSignOut }) {
   const [tab, setTab] = useState('dashboard')
   const ctx = WORKSPACE
   const activeProductTitles = titlesForProductIds(user.products)
+  const greetName = displayNameFromEmail(user.email)
+  const heading = TAB_HEADINGS[tab] || TAB_HEADINGS.dashboard
+  const mainTitle = heading.title ?? user.company
+  const mainSub = heading.sub ?? ctx.sub
 
   return (
     <div className="client-app">
@@ -138,12 +178,7 @@ export default function ClientDashboard({ user, onSignOut }) {
       <div className="client-body">
         <aside className="client-sidebar" aria-label="Workspace">
           <p className="client-sidebar-label">Workspace</p>
-          {[
-            { id: 'dashboard', label: 'Dashboard' },
-            { id: 'alerts', label: 'AI Alerts' },
-            { id: 'reports', label: 'Reports' },
-            { id: 'insights', label: 'Insights' },
-          ].map((item) => (
+          {NAV_ITEMS.map((item) => (
             <button
               key={item.id}
               type="button"
@@ -157,9 +192,25 @@ export default function ClientDashboard({ user, onSignOut }) {
 
         <main className="client-main">
           <div className="client-main-header">
-            <h1 className="client-main-title">{user.company}</h1>
-            <p className="client-main-sub">{ctx.sub}</p>
+            <h1 className="client-main-title">{mainTitle}</h1>
+            <p className="client-main-sub">{mainSub}</p>
           </div>
+
+          {tab === 'dashboard' ? (
+            <div className="client-welcome" role="status">
+              <p className="client-welcome-greet">Welcome back, {greetName}</p>
+              <p className="client-welcome-meta">
+                Signed in as <strong>{user.email}</strong>
+                {user.lastLoginAt ? (
+                  <>
+                    {' '}
+                    · Last session {formatSessionDate(user.lastLoginAt)}
+                  </>
+                ) : null}
+                . Below is demo monitoring data for your workspace — replace with live feeds in production.
+              </p>
+            </div>
+          ) : null}
 
           {tab === 'dashboard' ? (
             <>
@@ -293,6 +344,60 @@ export default function ClientDashboard({ user, onSignOut }) {
               </ul>
               <p className="client-text-foot">
                 Ask in plain language — answers cite machines, lots, and timestamps.
+              </p>
+            </div>
+          ) : null}
+
+          {tab === 'account' ? (
+            <div className="client-account-panel">
+              <dl className="client-account-dl">
+                <div className="client-account-row">
+                  <dt>Work email</dt>
+                  <dd>{user.email}</dd>
+                </div>
+                <div className="client-account-row">
+                  <dt>Organization</dt>
+                  <dd>{user.company}</dd>
+                </div>
+                <div className="client-account-row">
+                  <dt>Workspace slug</dt>
+                  <dd>
+                    <code className="client-account-code">{user.slug}</code>
+                  </dd>
+                </div>
+                <div className="client-account-row">
+                  <dt>Plan</dt>
+                  <dd>
+                    {user.planId && SUBSCRIPTION_PLAN_LABEL[user.planId]
+                      ? SUBSCRIPTION_PLAN_LABEL[user.planId]
+                      : 'No plan on file — contact sales to align billing.'}
+                  </dd>
+                </div>
+                <div className="client-account-row">
+                  <dt>Active products</dt>
+                  <dd>
+                    {activeProductTitles.length ? (
+                      <ul className="client-account-product-list">
+                        {activeProductTitles.map((t) => (
+                          <li key={t}>{t}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      '—'
+                    )}
+                  </dd>
+                </div>
+                <div className="client-account-row">
+                  <dt>Member since</dt>
+                  <dd>{formatSessionDate(user.createdAt)}</dd>
+                </div>
+                <div className="client-account-row">
+                  <dt>Last sign-in</dt>
+                  <dd>{formatSessionDate(user.lastLoginAt)}</dd>
+                </div>
+              </dl>
+              <p className="client-account-foot">
+                Password and billing changes can be added here as your admin flows grow.
               </p>
             </div>
           ) : null}

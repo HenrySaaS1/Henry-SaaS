@@ -24,6 +24,8 @@ function mapUserFromApi(user) {
       typeof user.planId === 'string' && ['basic', 'plus', 'premium'].includes(user.planId)
         ? user.planId
         : null,
+    createdAt: typeof user.createdAt === 'string' ? user.createdAt : null,
+    lastLoginAt: typeof user.lastLoginAt === 'string' ? user.lastLoginAt : null,
   }
 }
 
