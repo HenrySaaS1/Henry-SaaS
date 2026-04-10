@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import ClientDashboard from './ClientDashboard.jsx'
-import { authenticateBuiltIn, BUILT_IN_CLIENTS } from './builtInClients.js'
-import { PRODUCT_CATALOG, DEFAULT_PRODUCT_IDS } from './productCatalog.js'
+import { DEFAULT_PRODUCT_IDS } from './productCatalog.js'
+import { apiJson, getToken, setToken, clearAuth } from './apiClient.js'
 import heroMainImage from './assets/hero-main.png'
 import aiIconImage from './assets/uploads/img-1.png'
 import securityIconImage from './assets/uploads/img-3.png'
@@ -12,80 +12,19 @@ import pharmaImage from './assets/uploads/img-8.png'
 import medicalDevicesImage from './assets/uploads/img-10.png'
 import aboutHenryImage from './assets/about-henry.png'
 
-const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(
-  /\/$/,
-  '',
-)
-
-/** Demo-only: localStorage. Replace with API + hashed passwords in production. */
-const HENRY_DEMO_ACCOUNTS_KEY = 'henry_demo_accounts_v1'
-const HENRY_SESSION_KEY = 'henry_session_v1'
-
-function readDemoAccounts() {
-  if (typeof window === 'undefined') return []
-  try {
-    const raw = window.localStorage.getItem(HENRY_DEMO_ACCOUNTS_KEY)
-    if (!raw) return []
-    const data = JSON.parse(raw)
-    return Array.isArray(data) ? data : []
-  } catch {
-    return []
+function mapUserFromApi(user) {
+  if (!user || typeof user.email !== 'string') return null
+  return {
+    email: user.email,
+    company: user.company,
+    slug: typeof user.slug === 'string' ? user.slug : 'generic',
+    products:
+      Array.isArray(user.products) && user.products.length > 0 ? user.products : DEFAULT_PRODUCT_IDS,
+    planId:
+      typeof user.planId === 'string' && ['basic', 'plus', 'premium'].includes(user.planId)
+        ? user.planId
+        : null,
   }
-}
-
-function writeDemoAccounts(accounts) {
-  if (typeof window === 'undefined') return
-  window.localStorage.setItem(HENRY_DEMO_ACCOUNTS_KEY, JSON.stringify(accounts))
-}
-
-function readSession() {
-  if (typeof window === 'undefined') return null
-  try {
-    const raw = window.localStorage.getItem(HENRY_SESSION_KEY)
-    if (!raw) return null
-    const s = JSON.parse(raw)
-    if (!s || typeof s.email !== 'string' || typeof s.company !== 'string') return null
-    return {
-      email: s.email,
-      company: s.company,
-      slug: typeof s.slug === 'string' ? s.slug : 'generic',
-      products:
-        Array.isArray(s.products) && s.products.length > 0 ? s.products : DEFAULT_PRODUCT_IDS,
-      planId: typeof s.planId === 'string' && ['basic', 'plus', 'premium'].includes(s.planId) ? s.planId : null,
-    }
-  } catch {
-    return null
-  }
-}
-
-function writeSession(user) {
-  if (typeof window === 'undefined') return
-  window.localStorage.setItem(
-    HENRY_SESSION_KEY,
-    JSON.stringify({
-      email: user.email,
-      company: user.company,
-      slug: user.slug,
-      products: Array.isArray(user.products) ? user.products : DEFAULT_PRODUCT_IDS,
-      planId: user.planId && ['basic', 'plus', 'premium'].includes(user.planId) ? user.planId : null,
-    }),
-  )
-}
-
-function clearSession() {
-  if (typeof window === 'undefined') return
-  window.localStorage.removeItem(HENRY_SESSION_KEY)
-}
-
-function normalizeStoredAccount(row) {
-  const tenantName = (row.tenantName || row.company || '').trim()
-  const productIds =
-    Array.isArray(row.productIds) && row.productIds.length > 0
-      ? row.productIds
-      : DEFAULT_PRODUCT_IDS
-  const planId =
-    typeof row.planId === 'string' && ['basic', 'plus', 'premium'].includes(row.planId) ? row.planId : null
-  return { email: row.email, password: row.password, tenantName, productIds, planId }
 }
 
 /** Default HENRY modules suggested when registering from a pricing tier. */
@@ -101,11 +40,22 @@ const PLAN_DISPLAY = {
   premium: { label: 'Premium', price: '$300 / month' },
 }
 
+function defaultOrganizationFromEmail(email) {
+  const norm = String(email).trim().toLowerCase()
+  const domain = norm.split('@')[1]
+  if (!domain) return 'My workspace'
+  const main = domain.split('.')[0] || ''
+  const word = main.replace(/[^a-z0-9]/g, '')
+  if (!word) return 'My workspace'
+  return `${word.charAt(0).toUpperCase()}${word.slice(1)} workspace`
+}
+
 function signupStatusTone(message) {
   if (!message) return ''
   if (message.includes('already exists')) return 'signup-status-warning'
   if (
     message.includes('does not match') ||
+    message.includes('do not match') ||
     message.includes('incorrect') ||
     message.includes('Select at least')
   ) {
@@ -353,23 +303,33 @@ function App() {
   const [signupForm, setSignupForm] = useState({
     email: '',
     password: '',
-    tenantName: '',
-    productIds: [],
+    confirmPassword: '',
   })
   const [signupStatus, setSignupStatus] = useState('')
   const [authMode, setAuthMode] = useState('signup')
-  const [signupStep, setSignupStep] = useState(1)
   const [signupFromPlan, setSignupFromPlan] = useState(null)
   const [signupDashTab, setSignupDashTab] = useState('dashboard')
   const [currentUser, setCurrentUser] = useState(null)
 
   useEffect(() => {
-    const s = readSession()
-    if (s) setCurrentUser(s)
+    let cancelled = false
+    ;(async () => {
+      if (!getToken()) return
+      try {
+        const data = await apiJson('/api/auth/me')
+        const u = mapUserFromApi(data.user)
+        if (!cancelled && u) setCurrentUser(u)
+      } catch {
+        clearAuth()
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const signOut = () => {
-    clearSession()
+    clearAuth()
     setCurrentUser(null)
   }
 
@@ -382,15 +342,7 @@ function App() {
     event.preventDefault()
     setStatus('Submitting...')
     try {
-      const response = await fetch(`${API_BASE}/api/contact`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      })
-      const data = await response.json()
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to submit form')
-      }
+      await apiJson('/api/contact', { method: 'POST', body: form })
       setStatus('Thanks! We received your demo request and will be in touch.')
       setForm({
         name: '',
@@ -412,9 +364,8 @@ function App() {
   const closeSignupModal = () => {
     setShowSignup(false)
     setSignupStatus('')
-    setSignupStep(1)
     setSignupFromPlan(null)
-    setSignupForm({ email: '', password: '', tenantName: '', productIds: [] })
+    setSignupForm({ email: '', password: '', confirmPassword: '' })
   }
 
   const openAuthModal = (mode = 'signup', options = {}) => {
@@ -424,119 +375,92 @@ function App() {
     const planKey = options.planId
     const validPlan = planKey && PLAN_REGISTRATION_DEFAULTS[planKey] ? planKey : null
     if (mode === 'signup') {
-      setSignupStep(1)
       setSignupFromPlan(validPlan)
-      const presetProducts = validPlan ? [...PLAN_REGISTRATION_DEFAULTS[validPlan].productIds] : []
-      setSignupForm({ email: '', password: '', tenantName: '', productIds: presetProducts })
+      setSignupForm({ email: '', password: '', confirmPassword: '' })
     } else {
       setSignupFromPlan(null)
-      setSignupForm({ email: '', password: '', tenantName: '', productIds: [] })
+      setSignupForm({ email: '', password: '', confirmPassword: '' })
     }
     setShowSignup(true)
   }
 
-  const signupContinueStep1 = () => {
-    setSignupStatus('')
-    if (!signupForm.email?.trim() || !signupForm.password) {
-      setSignupStatus('Please enter your email and password.')
-      return
-    }
-    const emailKey = signupForm.email.trim().toLowerCase()
-    const accounts = readDemoAccounts()
-    if (accounts.some((a) => a.email === emailKey)) {
-      setSignupStatus('This email already has an account. Use Sign in below.')
-      setAuthMode('signin')
-      setSignupFromPlan(null)
-      setSignupForm((c) => ({ ...c, email: emailKey, password: '', tenantName: '', productIds: [] }))
-      return
-    }
-    setSignupStep(2)
-  }
-
-  const signupContinueStep2 = () => {
-    setSignupStatus('')
-    if (!signupForm.tenantName?.trim()) {
-      setSignupStatus('Enter your organization or workspace name (your tenant).')
-      return
-    }
-    setSignupStep(3)
-  }
-
-  const toggleSignupProduct = (productId) => {
-    setSignupForm((f) => {
-      const has = f.productIds.includes(productId)
-      return {
-        ...f,
-        productIds: has ? f.productIds.filter((x) => x !== productId) : [...f.productIds, productId],
-      }
-    })
-  }
-
-  const completeOnboarding = (event) => {
+  const submitSignup = async (event) => {
     event.preventDefault()
     setSignupStatus('')
-    if (signupForm.productIds.length === 0) {
-      setSignupStatus('Select at least one product for your workspace.')
+    if (!signupForm.email?.trim() || !signupForm.password || !signupForm.confirmPassword) {
+      setSignupStatus('Please fill in email, password, and confirm password.')
+      return
+    }
+    if (signupForm.password.length < 8) {
+      setSignupStatus('Password must be at least 8 characters.')
+      return
+    }
+    if (signupForm.password !== signupForm.confirmPassword) {
+      setSignupStatus('Passwords do not match.')
       return
     }
     const emailKey = signupForm.email.trim().toLowerCase()
-    const accounts = readDemoAccounts()
-    if (accounts.some((a) => a.email === emailKey)) {
-      setSignupStatus('This email is already registered. Sign in instead.')
-      setAuthMode('signin')
-      return
+    const productIds =
+      signupFromPlan && PLAN_REGISTRATION_DEFAULTS[signupFromPlan]
+        ? [...PLAN_REGISTRATION_DEFAULTS[signupFromPlan].productIds]
+        : [...DEFAULT_PRODUCT_IDS]
+    try {
+      const { available } = await apiJson(
+        `/api/auth/check-email?email=${encodeURIComponent(emailKey)}`,
+        { token: null },
+      )
+      if (!available) {
+        setSignupStatus('This email already has an account. Use Sign in below.')
+        setAuthMode('signin')
+        setSignupFromPlan(null)
+        setSignupForm((c) => ({ ...c, email: emailKey, password: '', confirmPassword: '' }))
+        return
+      }
+      const body = {
+        email: emailKey,
+        password: signupForm.password,
+        company: defaultOrganizationFromEmail(emailKey),
+        productIds,
+      }
+      if (signupFromPlan) body.planId = signupFromPlan
+      const data = await apiJson('/api/auth/register', {
+        method: 'POST',
+        body,
+        token: null,
+      })
+      setToken(data.token)
+      const u = mapUserFromApi(data.user)
+      if (u) setCurrentUser(u)
+      closeSignupModal()
+    } catch (e) {
+      const msg = e.message || ''
+      if (msg.includes('already registered')) {
+        setAuthMode('signin')
+      }
+      setSignupStatus(msg)
     }
-    const row = {
-      email: emailKey,
-      password: signupForm.password,
-      tenantName: signupForm.tenantName.trim(),
-      productIds: [...signupForm.productIds],
-    }
-    if (signupFromPlan) row.planId = signupFromPlan
-    accounts.push(row)
-    writeDemoAccounts(accounts)
-    const user = {
-      email: emailKey,
-      company: signupForm.tenantName.trim(),
-      slug: 'generic',
-      products: [...signupForm.productIds],
-      planId: signupFromPlan,
-    }
-    writeSession(user)
-    setCurrentUser(user)
-    closeSignupModal()
   }
 
-  const submitSignIn = (event) => {
+  const submitSignIn = async (event) => {
     event.preventDefault()
     if (!signupForm.email || !signupForm.password) {
       setSignupStatus('Please enter your email and password.')
       return
     }
     const emailKey = signupForm.email.trim().toLowerCase()
-    const builtIn = authenticateBuiltIn(signupForm.email, signupForm.password)
-    let user = builtIn
-    if (!user) {
-      const accounts = readDemoAccounts()
-      const row = accounts.find((a) => a.email === emailKey)
-      if (row && row.password === signupForm.password) {
-        const n = normalizeStoredAccount(row)
-        user = {
-          email: n.email,
-          company: n.tenantName,
-          slug: 'generic',
-          products: n.productIds,
-          planId: n.planId,
-        }
-      }
-    }
-    if (!user) {
+    try {
+      const data = await apiJson('/api/auth/login', {
+        method: 'POST',
+        body: { email: emailKey, password: signupForm.password },
+        token: null,
+      })
+      setToken(data.token)
+      const u = mapUserFromApi(data.user)
+      if (u) setCurrentUser(u)
+      closeSignupModal()
+    } catch {
       setSignupStatus('Email or password does not match. Try again or use Create account.')
-      return
     }
-    writeSession(user)
-    setCurrentUser(user)
-    closeSignupModal()
   }
 
   const continueWithGoogle = () => {
@@ -654,26 +578,14 @@ function App() {
                 <h2 id="signup-hero-title">
                   {authMode === 'signin'
                     ? 'Welcome back — your live factory dashboard'
-                    : signupStep === 1
-                      ? 'Step 1 — Your account'
-                      : signupStep === 2
-                        ? 'Step 2 — Create your tenant'
-                        : 'Step 3 — Choose products'}
+                    : 'Create your account — your live factory dashboard'}
                 </h2>
                 <p className="signup-hero-sub">
                   {authMode === 'signin'
                     ? 'Same workspace for every client: Dashboard, AI Alerts, Reports, and Insights.'
-                    : signupStep === 1
-                      ? signupFromPlan
-                        ? `You chose the ${PLAN_DISPLAY[signupFromPlan].label} plan from Pricing. Next: your account, then tenant name, then product modules (defaults match this tier).`
-                        : 'New customers start here: sign up, name your organization, then select HENRY products. Prefer a guided tour first? Use Request a demo on the page above Contact.'
-                      : signupStep === 2
-                        ? signupFromPlan
-                          ? 'Name the tenant that will appear on invoices and in the app. Your pricing tier stays linked through the final step.'
-                          : 'Your tenant is your company workspace in HENRY — one place for alerts, reports, and users you invite later.'
-                        : signupFromPlan
-                          ? 'Review modules pre-selected for your plan. Toggle any combination, then create the tenant and open your workspace.'
-                          : 'Pick what you are purchasing or trialing now. You can add modules anytime as your rollout grows.'}
+                    : signupFromPlan
+                      ? `You chose the ${PLAN_DISPLAY[signupFromPlan].label} plan from Pricing. Sign up with your work email; we pre-select modules for this tier and name your workspace from your email domain.`
+                      : 'New customers: sign up with your work email and password. Your workspace is created in one step. Prefer a guided tour first? Use Request a demo on the page above Contact.'}
                 </p>
                 <div className="signup-dashboard-mock">
                   <div className="signup-dash-sidebar">
@@ -889,12 +801,11 @@ function App() {
                       onClick={() => {
                         setAuthMode('signup')
                         setSignupStatus('')
-                        setSignupStep(1)
                         setSignupFromPlan(null)
-                        setSignupForm({ email: '', password: '', tenantName: '', productIds: [] })
+                        setSignupForm({ email: '', password: '', confirmPassword: '' })
                       }}
                     >
-                      New client
+                      Sign up
                     </button>
                     <button
                       type="button"
@@ -910,13 +821,6 @@ function App() {
                   </div>
                   {authMode === 'signup' ? (
                     <>
-                      <div className="onboarding-stepper" aria-hidden="true">
-                        <span className={signupStep === 1 ? 'active' : signupStep > 1 ? 'done' : ''}>1</span>
-                        <span className="onboarding-stepper-line" />
-                        <span className={signupStep === 2 ? 'active' : signupStep > 2 ? 'done' : ''}>2</span>
-                        <span className="onboarding-stepper-line" />
-                        <span className={signupStep === 3 ? 'active' : ''}>3</span>
-                      </div>
                       {signupFromPlan ? (
                         <p className="signup-pricing-context">
                           <span className="signup-pricing-context-label">Pricing</span>
@@ -924,179 +828,100 @@ function App() {
                           <span className="signup-pricing-context-price">{PLAN_DISPLAY[signupFromPlan].price}</span>
                         </p>
                       ) : null}
-                      <h3 id="onboarding-title">
-                        {signupStep === 1
-                          ? 'Account'
-                          : signupStep === 2
-                            ? 'Tenant'
-                            : 'Products'}
-                      </h3>
+                      <h3 id="onboarding-title">Account</h3>
                       <p className="signup-glass-hint">
-                        {signupStep === 1
-                          ? 'Use your work email — this becomes your login for this workspace.'
-                          : signupStep === 2
-                            ? 'This name appears across your workspace and invoices.'
-                            : signupFromPlan
-                              ? 'Modules below are pre-selected for your tier. Change selections if your rollout differs.'
-                              : 'Select what you are buying or piloting. Your dashboard reflects these choices.'}
+                        Use your work email — it becomes your login. Enter your password twice to confirm, then create
+                        your workspace.
                       </p>
-                      {signupStep === 1 ? (
-                        <form
-                          className="signup-form-new"
-                          onSubmit={(e) => {
-                            e.preventDefault()
-                            signupContinueStep1()
-                          }}
-                        >
-                          <label className="signup-field">
-                            <span className="signup-field-icon" aria-hidden="true">
-                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                                <path
-                                  d="M4 6h16v12H4V6zm2 2v8h12V8H6zm4 2h4v1h-4v-1z"
-                                  fill="currentColor"
-                                  opacity=".85"
-                                />
-                              </svg>
-                            </span>
-                            <input
-                              name="email"
-                              type="email"
-                              autoComplete="email"
-                              value={signupForm.email}
-                              onChange={updateSignupField}
-                              placeholder="Work email"
-                            />
-                          </label>
-                          <label className="signup-field">
-                            <span className="signup-field-icon" aria-hidden="true">
-                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                                <path
-                                  d="M12 2a5 5 0 00-5 5v3H6a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2v-8a2 2 0 00-2-2h-1V7a5 5 0 00-5-5zm-3 8V7a3 3 0 116 0v3H9z"
-                                  fill="currentColor"
-                                  opacity=".85"
-                                />
-                              </svg>
-                            </span>
-                            <input
-                              name="password"
-                              type="password"
-                              autoComplete="new-password"
-                              value={signupForm.password}
-                              onChange={updateSignupField}
-                              placeholder="Password"
-                            />
-                          </label>
-                          <button type="submit" className="btn-start-monitoring">
-                            Continue
-                          </button>
-                          <div className="signup-or">
-                            <span>or</span>
-                          </div>
-                          <button type="button" className="btn-google" onClick={continueWithGoogle}>
-                            <svg className="google-g" width="18" height="18" viewBox="0 0 24 24">
+                      <form className="signup-form-new" onSubmit={submitSignup}>
+                        <label className="signup-field">
+                          <span className="signup-field-icon" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                               <path
-                                fill="#4285F4"
-                                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                              />
-                              <path
-                                fill="#34A853"
-                                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                              />
-                              <path
-                                fill="#FBBC05"
-                                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                              />
-                              <path
-                                fill="#EA4335"
-                                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                                d="M4 6h16v12H4V6zm2 2v8h12V8H6zm4 2h4v1h-4v-1z"
+                                fill="currentColor"
+                                opacity=".85"
                               />
                             </svg>
-                            Continue with Google
-                          </button>
-                          {signupStatus ? (
-                            <p className={`signup-status-new ${signupStatusTone(signupStatus)}`}>{signupStatus}</p>
-                          ) : null}
-                        </form>
-                      ) : null}
-                      {signupStep === 2 ? (
-                        <form
-                          className="signup-form-new"
-                          onSubmit={(e) => {
-                            e.preventDefault()
-                            signupContinueStep2()
-                          }}
-                        >
-                          <label className="signup-field">
-                            <span className="signup-field-icon" aria-hidden="true">
-                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                                <path
-                                  d="M3 21h18v-2H3v2zm0-4h18v-2H3v2zm0-4h18v-2H3v2zm0-4h18V7H3v2zm0-4h18V3H3v2z"
-                                  fill="currentColor"
-                                  opacity=".85"
-                                />
-                              </svg>
-                            </span>
-                            <input
-                              name="tenantName"
-                              type="text"
-                              autoComplete="organization"
-                              value={signupForm.tenantName}
-                              onChange={updateSignupField}
-                              placeholder="Organization / tenant name"
+                          </span>
+                          <input
+                            name="email"
+                            type="email"
+                            autoComplete="email"
+                            value={signupForm.email}
+                            onChange={updateSignupField}
+                            placeholder="Work email"
+                          />
+                        </label>
+                        <label className="signup-field">
+                          <span className="signup-field-icon" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                              <path
+                                d="M12 2a5 5 0 00-5 5v3H6a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2v-8a2 2 0 00-2-2h-1V7a5 5 0 00-5-5zm-3 8V7a3 3 0 116 0v3H9z"
+                                fill="currentColor"
+                                opacity=".85"
+                              />
+                            </svg>
+                          </span>
+                          <input
+                            name="password"
+                            type="password"
+                            autoComplete="new-password"
+                            value={signupForm.password}
+                            onChange={updateSignupField}
+                            placeholder="Password"
+                          />
+                        </label>
+                        <label className="signup-field">
+                          <span className="signup-field-icon" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                              <path
+                                d="M12 2a5 5 0 00-5 5v3H6a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2v-8a2 2 0 00-2-2h-1V7a5 5 0 00-5-5zm-3 8V7a3 3 0 116 0v3H9z"
+                                fill="currentColor"
+                                opacity=".85"
+                              />
+                            </svg>
+                          </span>
+                          <input
+                            name="confirmPassword"
+                            type="password"
+                            autoComplete="new-password"
+                            value={signupForm.confirmPassword}
+                            onChange={updateSignupField}
+                            placeholder="Confirm password"
+                          />
+                        </label>
+                        <button type="submit" className="btn-start-monitoring">
+                          Create account
+                        </button>
+                        <div className="signup-or">
+                          <span>or</span>
+                        </div>
+                        <button type="button" className="btn-google" onClick={continueWithGoogle}>
+                          <svg className="google-g" width="18" height="18" viewBox="0 0 24 24">
+                            <path
+                              fill="#4285F4"
+                              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                             />
-                          </label>
-                          <div className="onboarding-actions-row">
-                            <button type="button" className="btn-onboarding-back" onClick={() => setSignupStep(1)}>
-                              Back
-                            </button>
-                            <button type="submit" className="btn-start-monitoring onboarding-next">
-                              Continue
-                            </button>
-                          </div>
-                          {signupStatus ? (
-                            <p className={`signup-status-new ${signupStatusTone(signupStatus)}`}>{signupStatus}</p>
-                          ) : null}
-                        </form>
-                      ) : null}
-                      {signupStep === 3 ? (
-                        <form className="signup-form-new" onSubmit={completeOnboarding}>
-                          {signupFromPlan ? (
-                            <p className="signup-product-plan-note">
-                              Completing registration links this tenant to the{' '}
-                              <strong>{PLAN_DISPLAY[signupFromPlan].label}</strong> plan; modules can still be edited
-                              before you continue.
-                            </p>
-                          ) : null}
-                          <div className="product-pick-grid" role="group" aria-label="HENRY products">
-                            {PRODUCT_CATALOG.map((p) => {
-                              const selected = signupForm.productIds.includes(p.id)
-                              return (
-                                <button
-                                  key={p.id}
-                                  type="button"
-                                  className={`product-pick-card${selected ? ' selected' : ''}`}
-                                  onClick={() => toggleSignupProduct(p.id)}
-                                  aria-pressed={selected}
-                                >
-                                  <span className="product-pick-title">{p.title}</span>
-                                  <span className="product-pick-short">{p.short}</span>
-                                </button>
-                              )
-                            })}
-                          </div>
-                          <div className="onboarding-actions-row">
-                            <button type="button" className="btn-onboarding-back" onClick={() => setSignupStep(2)}>
-                              Back
-                            </button>
-                            <button type="submit" className="btn-start-monitoring onboarding-next">
-                              Create tenant &amp; open workspace
-                            </button>
-                          </div>
-                          {signupStatus ? (
-                            <p className={`signup-status-new ${signupStatusTone(signupStatus)}`}>{signupStatus}</p>
-                          ) : null}
-                        </form>
-                      ) : null}
+                            <path
+                              fill="#34A853"
+                              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                            />
+                            <path
+                              fill="#FBBC05"
+                              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                            />
+                            <path
+                              fill="#EA4335"
+                              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                            />
+                          </svg>
+                          Continue with Google
+                        </button>
+                        {signupStatus ? (
+                          <p className={`signup-status-new ${signupStatusTone(signupStatus)}`}>{signupStatus}</p>
+                        ) : null}
+                      </form>
                     </>
                   ) : (
                     <>
@@ -1105,12 +930,6 @@ function App() {
                       <p className="signup-glass-hint">
                         Enter the same email and password you used when you created your HENRY account.
                       </p>
-                      {BUILT_IN_CLIENTS[0] ? (
-                        <p className="signup-harland-demo-hint">
-                          <strong>Harland Medical Systems (demo tenant):</strong>{' '}
-                          <code>{BUILT_IN_CLIENTS[0].email}</code> / <code>{BUILT_IN_CLIENTS[0].password}</code>
-                        </p>
-                      ) : null}
                       <form className="signup-form-new" onSubmit={submitSignIn}>
                         <label className="signup-field">
                           <span className="signup-field-icon" aria-hidden="true">

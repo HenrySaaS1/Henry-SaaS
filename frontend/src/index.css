@@ -1460,21 +1460,6 @@ a {
   color: rgba(200, 210, 240, 0.72);
 }
 
-.signup-harland-demo-hint {
-  margin: 0 0 1rem;
-  font-size: 0.72rem;
-  line-height: 1.45;
-  color: rgba(200, 230, 255, 0.55);
-}
-
-.signup-harland-demo-hint code {
-  font-size: 0.7rem;
-  padding: 0.12rem 0.35rem;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.25);
-  color: #a5f3fc;
-}
-
 .signup-signin-badge {
   display: inline-block;
   width: fit-content;

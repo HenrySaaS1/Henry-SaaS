@@ -1,0 +1,46 @@
+# Backend (Node + Express + Prisma) → Azure App Service (Linux).
+# Build runs on Ubuntu so Prisma engines match Linux App Service.
+#
+# GitHub → Settings → Secrets and variables → Actions:
+#   AZURE_WEBAPP_NAME              — e.g. henry-api (name of the Web App)
+#   AZURE_WEBAPP_BACKEND_PUBLISH_PROFILE — download from Azure Portal → Web App → Download publish profile
+#
+# App Service → Configuration → Application settings (examples):
+#   DATABASE_URL, JWT_SECRET, CORS_ORIGIN (your Static Web App URL), NODE_ENV=production
+#
+# After first deploy, run migrations once against production DB (local or Azure Cloud Shell):
+#   cd backend && DATABASE_URL="postgresql://..." npx prisma migrate deploy
+
+name: Azure App Service — backend API
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - '.github/workflows/azure-app-service-backend.yml'
+  workflow_dispatch:
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies and generate Prisma Client
+        working-directory: backend
+        run: npm ci
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_BACKEND_PUBLISH_PROFILE }}
+          package: backend
