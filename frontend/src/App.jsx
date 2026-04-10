@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import ClientDashboard from './ClientDashboard.jsx'
 import { DEFAULT_PRODUCT_IDS } from './productCatalog.js'
 import { apiJson, getToken, setToken, clearAuth } from './apiClient.js'

@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+﻿import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
 /** Same default module ids as frontend `productCatalog.js` */
