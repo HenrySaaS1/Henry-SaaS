@@ -25,8 +25,7 @@ Frontend runs at `http://localhost:5173` and API runs at `http://localhost:5000`
 - `GET /api/auth/check-email?email=`
 - `POST /api/auth/register` — body: `email`, `password`, `company`, `productIds[]`, optional `planId`
 - `POST /api/auth/login` — body: `email`, `password`
-- `GET /api/auth/me` — header: `Authorization: Bearer <token>` (includes `locations[]`)
-- `POST /api/locations` — add a site; body: `name`, optional `addressLine`, `city`, `region`, `country`, `isPrimary`; returns updated `user`
+- `GET /api/auth/me` — header: `Authorization: Bearer <token>`
 - `POST /api/contact` — saves to DB; optional same header to attach signed-in user
 
 Accounts and demo requests are stored in SQLite (`prisma/dev.db` by default). For production, point `DATABASE_URL` at PostgreSQL and run `npx prisma migrate deploy`.
