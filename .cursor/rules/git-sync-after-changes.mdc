@@ -1,0 +1,17 @@
+---
+description: Commit and push code changes to Git when editing this repo
+alwaysApply: true
+---
+
+# Sync changes to Git
+
+When this task **changes tracked project files** (source, config, workflows, Prisma, etc.):
+
+1. **Do not** commit secrets: never stage `.env`, `*.pem`, or publish profiles.
+2. After edits are complete for the task, run **`git status`**, then **`git add`** only the files that belong to the change.
+3. **`git commit`** with a short, accurate message (imperative mood, what/why in one line when possible).
+4. **`git push`** to the **current branch** (usually `main`). If push fails (auth, offline), tell the user exactly what to run.
+
+**Skip** committing/pushing when the user says not to, when there is nothing to commit, or when the change is intentionally exploratory and they asked to hold Git.
+
+**Note:** Edits the user makes alone in the editor are not pushed automatically unless they commit, or the agent runs Git in a follow-up. For “every save” automation, use a local watcher or enable Git integration manually—this rule covers **agent-made** changes in Cursor.
