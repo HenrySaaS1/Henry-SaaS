@@ -4,15 +4,31 @@ React frontend and Node.js backend scaffold that matches your demo landing page 
 
 ## Run locally
 
-1. **PostgreSQL** — the app uses PostgreSQL (same as Azure production). Your `backend/.env` must use a **`postgresql://...`** URL (not SQLite `file:...`). **You do not need Docker** — pick one:
+1. **Database** — **No PostgreSQL?** Use **SQLite** locally (file only, nothing to install):
 
-   **Option A — Cloud Postgres (easiest, no Docker)**  
+   In `backend/.env` set:
+
+   `DATABASE_URL="file:./dev.db"`
+
+   Then:
+
+   ```powershell
+   cd backend
+   npm install
+   npm run db:sqlite
+   ```
+
+   If `npm install` hits a Windows **EPERM** on Prisma, stop any running `npm run dev`, then run `npm install` again.
+
+   Azure/production still uses **PostgreSQL**; only your laptop can use SQLite for development.
+
+   **Option A — Cloud Postgres**  
    1. Create a free project at [Neon](https://neon.tech).  
    2. Copy the connection string into `backend/.env` as `DATABASE_URL`.  
    3. Ensure it includes SSL, e.g. append `?sslmode=require` if Neon does not already add it.  
    4. Run `cd backend` then `npx prisma migrate deploy`.
 
-   **Option B — PostgreSQL on Windows (no Docker)**  
+   **Option B — PostgreSQL on Windows**  
    1. Install: `winget install PostgreSQL.PostgreSQL.16` (or use the [EDB installer](https://www.postgresql.org/download/windows/)). Remember the **postgres** superuser password you set.  
    2. Create the app user and database:
 
@@ -36,7 +52,7 @@ React frontend and Node.js backend scaffold that matches your demo landing page 
    - `cd backend`
    - `copy .env.example .env` — set `DATABASE_URL` (see `.env.example`) and a strong `JWT_SECRET`
    - `npm install` (generates Prisma client via `postinstall`; if Windows reports EPERM on Prisma engine files, stop any running `npm run dev`, then run `npm install` again)
-   - `npx prisma migrate deploy` (creates tables; first time only)
+   - Create tables: if `DATABASE_URL` starts with `file:` run `npm run db:sqlite`; if PostgreSQL run `npx prisma migrate deploy`
    - `npm run db:seed` (optional — demo tenant `ops@harlandmedical.com`; see `prisma/seed.js`)
    - `npm run dev`
 

@@ -2,14 +2,19 @@
  * Windows: Prisma often fails with EPERM when renaming query_engine-*.dll.node
  * while another Node process has the engine loaded (e.g. `npm run dev`).
  * Removing `.prisma/client` first avoids the rename-onto-locked-file case.
+ *
+ * If DATABASE_URL is a SQLite file (file:...), generate from schema.sqlite.prisma;
+ * otherwise use the default PostgreSQL schema (Azure / Neon / local Postgres).
  */
 import { existsSync, rmSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import dotenv from 'dotenv'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, '..')
+dotenv.config({ path: path.join(root, '.env') })
 const clientDir = path.join(root, 'node_modules', '.prisma', 'client')
 
 if (existsSync(clientDir)) {
@@ -23,7 +28,13 @@ if (existsSync(clientDir)) {
   }
 }
 
-const result = spawnSync('npx', ['prisma', 'generate'], {
+const dbUrl = process.env.DATABASE_URL || ''
+const useSqlite = dbUrl.startsWith('file:')
+const prismaArgs = useSqlite
+  ? ['prisma', 'generate', '--config', 'prisma.config.sqlite.mjs']
+  : ['prisma', 'generate']
+
+const result = spawnSync('npx', prismaArgs, {
   cwd: root,
   stdio: 'inherit',
   shell: true,

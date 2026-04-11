@@ -1,0 +1,35 @@
+// Local development only — no PostgreSQL required. Production (Azure) uses schema.prisma (PostgreSQL).
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  company      String
+  slug         String    @default("generic")
+  planId       String?
+  productIds   String
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  contacts     Contact[]
+}
+
+model Contact {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  name        String
+  email       String
+  companyName String?
+  interest    String?
+  notes       String?
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
