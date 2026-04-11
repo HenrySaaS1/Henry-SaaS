@@ -1,4 +1,4 @@
-import { useState, useEffect, useId } from 'react'
+import { useState, useEffect, useId, useRef } from 'react'
 import { titlesForProductIds } from './productCatalog.js'
 
 const DASH_KPIS = [
@@ -18,6 +18,89 @@ const QUICK_ACTIONS = [
   { id: 'export', label: 'Export snapshot', detail: 'PDF + CSV bundle' },
   { id: 'digest', label: 'Schedule digest', detail: 'Email to distribution list' },
   { id: 'runbook', label: 'Open runbook', detail: 'Escalation & on-call' },
+]
+
+const PRODUCTION_LINES = [
+  {
+    id: 'L01',
+    name: 'Assembly East 01',
+    status: 'running',
+    oee: '92.1%',
+    target: '90%',
+    sku: 'SKU-4412-B',
+    note: 'Ahead of takt · 12 operators',
+  },
+  {
+    id: 'L02',
+    name: 'Press Cell 2',
+    status: 'idle',
+    oee: '—',
+    target: '88%',
+    sku: 'Die changeover',
+    note: 'Tooling swap approved · est. 18 min',
+  },
+  {
+    id: 'L03',
+    name: 'Packaging Line C',
+    status: 'running',
+    oee: '88.4%',
+    target: '90%',
+    sku: 'SKU-9081',
+    note: 'New hire shadowing · coach on station 4',
+  },
+  {
+    id: 'L04',
+    name: 'Robot weld R-12',
+    status: 'alert',
+    oee: '81.0%',
+    target: '85%',
+    sku: 'Lot W-221',
+    note: 'Cycle drift +8% · torque review queued',
+  },
+  {
+    id: 'L05',
+    name: 'Chiller loop B',
+    status: 'running',
+    oee: '—',
+    target: '—',
+    sku: 'Utilities',
+    note: 'Supply temp +1.2°C · facilities ticket #8842',
+  },
+  {
+    id: 'L06',
+    name: 'Clean room fill',
+    status: 'down',
+    oee: '0%',
+    target: '92%',
+    sku: 'Sterile batch S-12',
+    note: 'Unplanned stop · QA hold pending release',
+  },
+]
+
+const TODAY_PRIORITIES = [
+  { id: 'p1', done: false, label: 'Close out Line 07 vibration root cause (maintenance + QA)', due: 'Today 15:00' },
+  { id: 'p2', done: false, label: 'Sign off Press Cell 2 die change checklist before restart', due: 'Today 16:30' },
+  { id: 'p3', done: true, label: 'Post morning stand-up notes to shift digest', due: 'Done' },
+  { id: 'p4', done: false, label: 'Review Cell C ship-risk forecast with planner', due: 'Tomorrow 09:00' },
+]
+
+const SHIFT_SEGMENTS = [
+  { label: 'Shift A', pct: 35, tone: 'a' },
+  { label: 'Shift B', pct: 40, tone: 'b' },
+  { label: 'Shift C', pct: 25, tone: 'c' },
+]
+
+const NOTIFICATION_ITEMS = [
+  { id: 'n1', title: 'High · Line 07 spindle vibration', detail: 'Unacknowledged · escalates in 8 min', when: '12 min ago' },
+  { id: 'n2', title: 'Export ready · 2nd shift PDF', detail: 'Yesterday wrap-up report', when: '18 min ago' },
+  { id: 'n3', title: 'Integration · Historian sync lag', detail: 'OPC node 3 · 90s behind real-time', when: '1 hr ago' },
+]
+
+const REPORT_RANGE_PRESETS = [
+  { id: 'shift', label: 'This shift' },
+  { id: '24h', label: 'Last 24h' },
+  { id: '7d', label: 'Last 7 days' },
+  { id: 'mtd', label: 'Month to date' },
 ]
 
 function displayNameFromEmail(email) {
@@ -141,6 +224,13 @@ const NAV_ITEMS = [
     ),
   },
   {
+    id: 'lines',
+    label: 'Lines',
+    icon: (
+      <path d="M4 6h4v12H4V6zm6-2h4v14h-4V4zm6 4h4v10h-4V8zm6-4h4v14h-4V4z" />
+    ),
+  },
+  {
     id: 'alerts',
     label: 'AI Alerts',
     icon: (
@@ -172,6 +262,7 @@ const NAV_ITEMS = [
 
 const TAB_HEADINGS = {
   dashboard: { title: null, sub: null },
+  lines: { title: 'Production lines', sub: 'Live status, OEE vs target, and operator context per asset.' },
   alerts: { title: 'AI Alerts', sub: 'Unacknowledged items and escalation status for your lines.' },
   reports: { title: 'Reports', sub: 'Shift summaries, quality, and labor rollups — export or schedule digests.' },
   insights: { title: 'Insights', sub: 'Correlations, forecasts, and what changed — with citations to the floor.' },
@@ -208,6 +299,12 @@ function saveOnboard(email, state) {
 /** Post–sign-in checklist: drives users into each major area of the workspace. */
 const ONBOARD_STEPS = [
   {
+    id: 'lines',
+    title: 'Browse production lines',
+    body: 'See running, idle, and down assets with SKU and OEE at a glance.',
+    tab: 'lines',
+  },
+  {
     id: 'alerts',
     title: 'Skim AI alerts',
     body: 'See how high-priority line issues surface with severity and timestamps.',
@@ -239,11 +336,30 @@ export default function ClientDashboard({ user, onSignOut }) {
   const [toast, setToast] = useState('')
   const [nowTick, setNowTick] = useState(() => new Date())
   const [onboard, setOnboard] = useState(() => loadOnboard(user.email))
+  const [priorities, setPriorities] = useState(() => TODAY_PRIORITIES.map((p) => ({ ...p })))
+  const [alertFilter, setAlertFilter] = useState('all')
+  const [ackedIds, setAckedIds] = useState(() => new Set())
+  const [reportRange, setReportRange] = useState('7d')
+  const [insightQuestion, setInsightQuestion] = useState('')
+  const [searchQ, setSearchQ] = useState('')
+  const [notifOpen, setNotifOpen] = useState(false)
+  const notifWrapRef = useRef(null)
   const chartUid = useId().replace(/:/g, '')
 
   useEffect(() => {
     setOnboard(loadOnboard(user.email))
   }, [user.email])
+
+  useEffect(() => {
+    if (!notifOpen) return
+    const close = (e) => {
+      if (notifWrapRef.current && !notifWrapRef.current.contains(e.target)) {
+        setNotifOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [notifOpen])
 
   useEffect(() => {
     const t = setInterval(() => setNowTick(new Date()), 30_000)
@@ -307,6 +423,41 @@ export default function ClientDashboard({ user, onSignOut }) {
 
   const onboardAllDone = ONBOARD_STEPS.every((s) => onboard.done.includes(s.id))
 
+  const visibleAlerts = ctx.alerts.filter((a) => {
+    if (ackedIds.has(a.id)) return false
+    if (alertFilter === 'all') return true
+    return a.severity === alertFilter
+  })
+
+  const acknowledgeAlert = (id) => {
+    setAckedIds((prev) => new Set([...prev, id]))
+    setToast('Alert acknowledged (demo) — wire to Slack, CMMS, or MES in production.')
+  }
+
+  const togglePriority = (id) => {
+    setPriorities((rows) => rows.map((r) => (r.id === id ? { ...r, done: !r.done } : r)))
+  }
+
+  const runInsightAsk = () => {
+    const q = insightQuestion.trim()
+    if (!q) {
+      setToast('Ask a question about throughput, scrap, or downtime.')
+      return
+    }
+    setToast('HENRY would answer with cited machine events (demo). Connect your LLM + data lake when ready.')
+    setInsightQuestion('')
+  }
+
+  const filteredLines = PRODUCTION_LINES.filter((line) => {
+    const q = searchQ.trim().toLowerCase()
+    if (!q) return true
+    return (
+      line.name.toLowerCase().includes(q) ||
+      line.sku.toLowerCase().includes(q) ||
+      line.id.toLowerCase().includes(q)
+    )
+  })
+
   return (
     <div className="client-app">
       {toast ? (
@@ -319,6 +470,28 @@ export default function ClientDashboard({ user, onSignOut }) {
           <span className="client-logo-main">HENRY</span>
           <span className="client-logo-sub">Client workspace</span>
         </div>
+        <div className="client-topbar-search" role="search">
+          <label htmlFor="ws-search" className="client-sr-only">
+            Search workspace
+          </label>
+          <input
+            id="ws-search"
+            type="search"
+            className="client-search-input"
+            placeholder="Search lines, SKUs, lots…"
+            value={searchQ}
+            onChange={(e) => setSearchQ(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                setToast(
+                  searchQ.trim()
+                    ? `Search “${searchQ.trim()}” → index your MES / historian in production.`
+                    : 'Type a term to search (demo).',
+                )
+              }
+            }}
+          />
+        </div>
         <div className="client-topbar-mid">
           <div className="client-live-pill" title="Demo live indicator">
             <span className="client-live-dot" aria-hidden="true" />
@@ -327,6 +500,49 @@ export default function ClientDashboard({ user, onSignOut }) {
           <time className="client-clock" dateTime={nowTick.toISOString()}>
             {clockLine}
           </time>
+        </div>
+        <div className="client-notif-wrap" ref={notifWrapRef}>
+          <button
+            type="button"
+            className="client-notif-trigger"
+            aria-expanded={notifOpen}
+            aria-haspopup="true"
+            onClick={() => setNotifOpen((o) => !o)}
+          >
+            <svg className="client-notif-bell" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                fill="currentColor"
+                d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 002 2zm6-6V11c0-3.07-1.63-5.64-4.5-6.32V4a1.5 1.5 0 00-3 0v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"
+              />
+            </svg>
+            <span className="client-notif-badge">{NOTIFICATION_ITEMS.length}</span>
+            <span className="client-sr-only">Notifications</span>
+          </button>
+          {notifOpen ? (
+            <div className="client-notif-dropdown" role="menu">
+              <p className="client-notif-dropdown-title">Notifications</p>
+              <ul className="client-notif-list">
+                {NOTIFICATION_ITEMS.map((n) => (
+                  <li key={n.id}>
+                    <button
+                      type="button"
+                      className="client-notif-item"
+                      role="menuitem"
+                      onClick={() => {
+                        setNotifOpen(false)
+                        setTab('alerts')
+                        setToast(n.title)
+                      }}
+                    >
+                      <span className="client-notif-item-title">{n.title}</span>
+                      <span className="client-notif-item-meta">{n.detail}</span>
+                      <span className="client-notif-item-when">{n.when}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </div>
         <div className="client-tenant">
           <span className="client-tenant-avatar" aria-hidden="true">
@@ -424,7 +640,7 @@ export default function ClientDashboard({ user, onSignOut }) {
                       Getting started
                     </h2>
                     <p className="client-onboard-sub">
-                      Four quick steps — each jumps to the right place in your workspace.
+                      Five quick steps — each jumps to the right place in your workspace.
                     </p>
                   </div>
                   <button type="button" className="client-onboard-dismiss" onClick={dismissOnboard}>
@@ -481,6 +697,28 @@ export default function ClientDashboard({ user, onSignOut }) {
                 ))}
               </div>
 
+              <div className="client-line-snapshot" aria-label="Line health snapshot">
+                {PRODUCTION_LINES.slice(0, 3).map((line) => (
+                  <article key={line.id} className="client-line-mini">
+                    <span className={`client-line-pill client-line-pill--${line.status}`}>{line.status}</span>
+                    <div className="client-line-mini-body">
+                      <strong>{line.name}</strong>
+                      <span className="client-line-mini-oee">{line.oee} OEE</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="client-line-mini-link"
+                      onClick={() => {
+                        setSearchQ('')
+                        setTab('lines')
+                      }}
+                    >
+                      Lines →
+                    </button>
+                  </article>
+                ))}
+              </div>
+
               <div className="client-quick-actions" aria-label="Quick actions">
                 {QUICK_ACTIONS.map((a) => (
                   <button
@@ -493,6 +731,61 @@ export default function ClientDashboard({ user, onSignOut }) {
                     <span className="client-quick-action-detail">{a.detail}</span>
                   </button>
                 ))}
+              </div>
+
+              <div className="client-dash-extras">
+                <section className="client-priorities" aria-labelledby="pri-title">
+                  <div className="client-priorities-head">
+                    <h2 id="pri-title" className="client-panel-title">
+                      Today&apos;s priorities
+                    </h2>
+                    <span className="client-panel-badge">{priorities.filter((p) => !p.done).length} open</span>
+                  </div>
+                  <ul className="client-priority-list">
+                    {priorities.map((p) => (
+                      <li key={p.id} className={`client-priority-row${p.done ? ' client-priority-row--done' : ''}`}>
+                        <button
+                          type="button"
+                          className={`client-priority-check${p.done ? ' is-done' : ''}`}
+                          aria-pressed={p.done}
+                          onClick={() => togglePriority(p.id)}
+                          aria-label={p.done ? 'Mark not done' : 'Mark done'}
+                        >
+                          {p.done ? '✓' : ''}
+                        </button>
+                        <span className="client-priority-label">{p.label}</span>
+                        <span className="client-priority-due">{p.due}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+                <section className="client-shift-panel" aria-labelledby="shift-title">
+                  <h2 id="shift-title" className="client-panel-title">
+                    Shift mix (rolling)
+                  </h2>
+                  <div
+                    className="client-shift-bar"
+                    role="img"
+                    aria-label="Shift A thirty-five percent, B forty, C twenty-five"
+                  >
+                    {SHIFT_SEGMENTS.map((s) => (
+                      <div
+                        key={s.label}
+                        className={`client-shift-seg client-shift-seg--${s.tone}`}
+                        style={{ width: `${s.pct}%` }}
+                        title={`${s.label} · ${s.pct}%`}
+                      />
+                    ))}
+                  </div>
+                  <ul className="client-shift-legend">
+                    {SHIFT_SEGMENTS.map((s) => (
+                      <li key={s.label}>
+                        <span className={`client-shift-dot client-shift-dot--${s.tone}`} aria-hidden="true" />
+                        {s.label} · {s.pct}%
+                      </li>
+                    ))}
+                  </ul>
+                </section>
               </div>
 
               <div className="client-dash-split">
@@ -621,11 +914,71 @@ export default function ClientDashboard({ user, onSignOut }) {
             </>
           ) : null}
 
+          {tab === 'lines' ? (
+            <div className="client-lines-page">
+              <p className="client-lines-lead">
+                {searchQ.trim()
+                  ? `${filteredLines.length} line(s) match “${searchQ.trim()}”. Clear the search bar to see all.`
+                  : `${PRODUCTION_LINES.length} assets at this site. Use the top search to filter by name, SKU, or line ID.`}
+              </p>
+              <div className="client-line-grid">
+                {filteredLines.map((line) => (
+                  <article key={line.id} className="client-line-card">
+                    <header className="client-line-card-head">
+                      <span className={`client-line-pill client-line-pill--${line.status}`}>{line.status}</span>
+                      <span className="client-line-id">{line.id}</span>
+                    </header>
+                    <h3 className="client-line-name">{line.name}</h3>
+                    <dl className="client-line-dl">
+                      <div>
+                        <dt>OEE</dt>
+                        <dd>{line.oee}</dd>
+                      </div>
+                      <div>
+                        <dt>Target</dt>
+                        <dd>{line.target}</dd>
+                      </div>
+                      <div className="client-line-dl-span">
+                        <dt>SKU / job</dt>
+                        <dd>{line.sku}</dd>
+                      </div>
+                    </dl>
+                    <p className="client-line-note">{line.note}</p>
+                    <button
+                      type="button"
+                      className="client-line-cta"
+                      onClick={() =>
+                        setToast(`Detail view for ${line.name} — trends, alarms, and work orders (demo).`)
+                      }
+                    >
+                      Open detail
+                    </button>
+                  </article>
+                ))}
+              </div>
+              {filteredLines.length === 0 ? (
+                <p className="client-lines-empty">No lines match that search.</p>
+              ) : null}
+            </div>
+          ) : null}
+
           {tab === 'alerts' ? (
             <div className="client-alerts-panel">
               <p className="client-alerts-lead">{ctx.alertsLead}</p>
+              <div className="client-filter-row" role="toolbar" aria-label="Filter alerts by severity">
+                {(['all', 'high', 'med', 'low']).map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    className={`client-filter-chip${alertFilter === f ? ' active' : ''}`}
+                    onClick={() => setAlertFilter(f)}
+                  >
+                    {f === 'all' ? 'All' : f === 'high' ? 'High' : f === 'med' ? 'Medium' : 'Low'}
+                  </button>
+                ))}
+              </div>
               <ul className="client-alert-list">
-                {ctx.alerts.map((a) => (
+                {visibleAlerts.map((a) => (
                   <li key={a.id} className="client-alert-row">
                     <span className={`client-sev client-sev--${a.severity}`}>
                       {a.severity === 'high' ? 'High' : a.severity === 'med' ? 'Med' : 'Low'}
@@ -635,15 +988,57 @@ export default function ClientDashboard({ user, onSignOut }) {
                       <p>{a.detail}</p>
                       <span className="client-alert-when">{a.when}</span>
                     </div>
+                    <button type="button" className="client-alert-ack" onClick={() => acknowledgeAlert(a.id)}>
+                      Acknowledge
+                    </button>
                   </li>
                 ))}
               </ul>
+              {visibleAlerts.length === 0 ? (
+                <p className="client-alerts-empty">
+                  {ackedIds.size > 0
+                    ? 'No alerts in this filter — try another severity or you’ve acknowledged them all.'
+                    : 'No alerts match this filter.'}
+                </p>
+              ) : null}
               <p className="client-alerts-foot">{ctx.alertsFoot}</p>
             </div>
           ) : null}
 
           {tab === 'reports' ? (
             <div className="client-text-panel">
+              <div className="client-reports-toolbar">
+                <div className="client-filter-row" role="toolbar" aria-label="Report time range">
+                  {REPORT_RANGE_PRESETS.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      className={`client-filter-chip${reportRange === p.id ? ' active' : ''}`}
+                      onClick={() => setReportRange(p.id)}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="client-reports-actions">
+                  <button
+                    type="button"
+                    className="client-report-export"
+                    onClick={() =>
+                      setToast(`Export ${reportRange} bundle (PDF + CSV) — hook to your job queue in production.`)
+                    }
+                  >
+                    Export range
+                  </button>
+                  <button
+                    type="button"
+                    className="client-report-export client-report-export--ghost"
+                    onClick={() => setToast('Schedule digest — pick teams and cadence in settings.')}
+                  >
+                    Schedule digest
+                  </button>
+                </div>
+              </div>
               <p className="client-text-lead">{ctx.reportsLead}</p>
               <div className="client-dossier-grid">
                 {ctx.reports.map((r) => (
@@ -659,6 +1054,30 @@ export default function ClientDashboard({ user, onSignOut }) {
 
           {tab === 'insights' ? (
             <div className="client-text-panel">
+              <section className="client-insight-ask" aria-label="Ask HENRY">
+                <label htmlFor="insight-q" className="client-insight-ask-label">
+                  Ask in plain language
+                </label>
+                <div className="client-insight-ask-row">
+                  <input
+                    id="insight-q"
+                    type="text"
+                    className="client-insight-input"
+                    placeholder='e.g. “What drove scrap on Line 03 this week?”'
+                    value={insightQuestion}
+                    onChange={(e) => setInsightQuestion(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') runInsightAsk()
+                    }}
+                  />
+                  <button type="button" className="client-insight-submit" onClick={runInsightAsk}>
+                    Ask HENRY
+                  </button>
+                </div>
+                <p className="client-insight-ask-hint">
+                  Answers will cite machines, lots, and timestamps when your data lake is connected.
+                </p>
+              </section>
               <p className="client-text-lead">{ctx.insightsLead}</p>
               <div className="client-dossier-grid">
                 {ctx.insights.map((r) => (
@@ -761,6 +1180,16 @@ export default function ClientDashboard({ user, onSignOut }) {
                 >
                   <span className="client-account-action-title">Implementation</span>
                   <span className="client-account-action-desc">Integrations and go-live checklist</span>
+                </button>
+                <button
+                  type="button"
+                  className="client-account-action-card"
+                  onClick={() =>
+                    setToast('API keys & webhooks — rotate secrets and point HENRY at your MES / data warehouse.')
+                  }
+                >
+                  <span className="client-account-action-title">API &amp; webhooks</span>
+                  <span className="client-account-action-desc">Keys, event subscriptions, rate limits</span>
                 </button>
               </div>
               <p className="client-account-foot">
