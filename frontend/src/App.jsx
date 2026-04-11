@@ -298,20 +298,26 @@ function App() {
   const [currentUser, setCurrentUser] = useState(null)
 
   useEffect(() => {
-    let cancelled = false
+    const ac = new AbortController()
+
     ;(async () => {
-      if (!getToken()) return
+      const tokenSnapshot = getToken()
+      if (!tokenSnapshot) return
+
       try {
-        const data = await apiJson('/api/auth/me')
+        const data = await apiJson('/api/auth/me', { signal: ac.signal })
+        if (ac.signal.aborted) return
+        // Ignore stale responses if the user signed in/out while this request was in flight
+        if (getToken() !== tokenSnapshot) return
         const u = mapUserFromApi(data.user)
-        if (!cancelled && u) setCurrentUser(u)
-      } catch {
-        clearAuth()
+        if (u) setCurrentUser(u)
+      } catch (e) {
+        if (ac.signal.aborted || e?.name === 'AbortError') return
+        if (getToken() === tokenSnapshot) clearAuth()
       }
     })()
-    return () => {
-      cancelled = true
-    }
+
+    return () => ac.abort()
   }, [])
 
   const signOut = () => {
@@ -405,7 +411,12 @@ function App() {
       })
       setToken(data.token)
       const u = mapUserFromApi(data.user)
-      if (u) setCurrentUser(u)
+      if (!u) {
+        setSignupStatus('Account created but profile could not be loaded. Try Sign in.')
+        setAuthMode('signin')
+        return
+      }
+      setCurrentUser(u)
       closeSignupModal()
     } catch (e) {
       const msg = e.message || ''
@@ -431,7 +442,11 @@ function App() {
       })
       setToken(data.token)
       const u = mapUserFromApi(data.user)
-      if (u) setCurrentUser(u)
+      if (!u) {
+        setSignupStatus('Signed in but profile could not be loaded. Please try again.')
+        return
+      }
+      setCurrentUser(u)
       closeSignupModal()
     } catch {
       setSignupStatus('Email or password does not match. Try again or use Create account.')

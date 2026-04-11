@@ -24,7 +24,7 @@ export function clearAuth() {
   localStorage.removeItem('henry_session_v1')
 }
 
-export async function apiJson(path, { method = 'GET', body, token } = {}) {
+export async function apiJson(path, { method = 'GET', body, token, signal } = {}) {
   const headers = { 'Content-Type': 'application/json' }
   const t = token === undefined ? getToken() : token
   if (t) headers.Authorization = `Bearer ${t}`
@@ -32,6 +32,7 @@ export async function apiJson(path, { method = 'GET', body, token } = {}) {
     method,
     headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
+    signal,
   })
   const data = await res.json().catch(() => ({}))
   if (!res.ok) {
