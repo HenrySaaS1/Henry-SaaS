@@ -4,38 +4,32 @@ React frontend and Node.js backend scaffold that matches your demo landing page 
 
 ## Run locally
 
-1. **PostgreSQL** — the app uses PostgreSQL (same as Azure production). Your `backend/.env` must use a **`postgresql://...`** URL (not SQLite `file:...`).
+1. **PostgreSQL** — the app uses PostgreSQL (same as Azure production). Your `backend/.env` must use a **`postgresql://...`** URL (not SQLite `file:...`). **You do not need Docker** — pick one:
 
-   **Option A — Docker (simplest)**  
-   From the repo root:
+   **Option A — Cloud Postgres (easiest, no Docker)**  
+   1. Create a free project at [Neon](https://neon.tech).  
+   2. Copy the connection string into `backend/.env` as `DATABASE_URL`.  
+   3. Ensure it includes SSL, e.g. append `?sslmode=require` if Neon does not already add it.  
+   4. Run `cd backend` then `npx prisma migrate deploy`.
 
-   ```bash
-   docker compose up -d
-   ```
-
-   **Option B — Setup script (Windows)**  
-   From the repo root:
-
-   ```powershell
-   cd backend
-   npm run db:setup
-   ```
-
-   This starts Docker Compose if `docker` is available, then runs `prisma migrate deploy`. If Docker is not installed, it prints alternatives.
-
-   **Option C — PostgreSQL installed on Windows**  
-   Example: `winget install PostgreSQL.PostgreSQL.16`, then create the app user and database (same as Docker defaults):
+   **Option B — PostgreSQL on Windows (no Docker)**  
+   1. Install: `winget install PostgreSQL.PostgreSQL.16` (or use the [EDB installer](https://www.postgresql.org/download/windows/)). Remember the **postgres** superuser password you set.  
+   2. Create the app user and database:
 
    ```powershell
    & "C:\Program Files\PostgreSQL\16\bin\psql.exe" -U postgres -f scripts/init-henry-db.sql
    ```
 
-   Adjust the path/version if yours differs. Then set `DATABASE_URL` in `backend/.env` to:
+   Adjust the path if your version folder is not `16`.  
+   3. In `backend/.env` set:
 
-   `postgresql://henry:henry@localhost:5432/henry?schema=public`
+   `DATABASE_URL="postgresql://henry:henry@localhost:5432/henry?schema=public"`
 
-   **Option D — Cloud (no local server)**  
-   Use a free [Neon](https://neon.tech) project, copy the connection string into `DATABASE_URL`, and append `?sslmode=require` if the host requires SSL.
+   4. Run `cd backend` then `npx prisma migrate deploy`.
+
+   **Option C — Docker (optional)**  
+   If you use Docker later: from the repo root run `docker compose up -d`, then `cd backend` and `npx prisma migrate deploy`.  
+   On Windows you can run `cd backend` and `npm run db:setup` to start Compose (when `docker` is installed) and migrate in one step.
 
 2. **Backend**
 
