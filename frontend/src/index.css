@@ -2569,27 +2569,24 @@ a {
 
 .client-building-topbar {
   position: relative;
-  margin-bottom: 0.75rem;
-  padding: 0 2.75rem;
-  text-align: center;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  margin-bottom: 0.65rem;
+  padding: 0.1rem 2.85rem 0.15rem 0.35rem;
+  min-height: 2.75rem;
 }
 
-.client-building-local {
-  position: absolute;
-  left: 0.15rem;
-  top: 50%;
-  transform: translateY(-50%);
-  max-width: 42%;
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: #0f172a;
-  text-align: left;
-  line-height: 1.25;
+.client-building-topbar-brand {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  padding: 0 0.25rem;
 }
 
 .client-building-name {
-  margin: 0;
-  font-size: 1.05rem;
+  margin: 0 0 0.2rem;
+  font-size: 1.18rem;
   font-weight: 900;
   letter-spacing: 0.03em;
   text-align: center;
@@ -2597,16 +2594,27 @@ a {
   line-height: 1.2;
 }
 
+.client-building-topbar-local {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0.02em;
+  text-align: center;
+  color: rgba(15, 23, 42, 0.82);
+  font-variant-numeric: tabular-nums;
+}
+
 .client-building-close {
   position: absolute;
-  right: 0.15rem;
-  top: 50%;
-  transform: translateY(-50%);
+  right: 0.1rem;
+  top: 0.1rem;
   width: 2.25rem;
   height: 2.25rem;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
   border: none;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.92);
@@ -2620,7 +2628,7 @@ a {
 
 .client-building-close:hover {
   background: #fff;
-  transform: translateY(-50%) scale(1.04);
+  transform: scale(1.05);
 }
 
 .client-building-floor {
@@ -2630,7 +2638,6 @@ a {
   flex-direction: column;
   align-items: stretch;
   justify-content: flex-start;
-  gap: 0.45rem;
 }
 
 .client-building-floor-inner {
@@ -2657,20 +2664,7 @@ a {
   z-index: 1;
 }
 
-.client-building-floor-heading {
-  margin: 0;
-  padding: 0 0.5rem;
-  font-size: 1.12rem;
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  text-align: center;
-  color: #0f172a;
-  line-height: 1.25;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
-  flex-shrink: 0;
-}
-
-/* Full-width strip: hides embedded Local Time + clipped title on PNG; real title is .client-building-floor-heading */
+/* Full-width strip: hides embedded header chrome on reference PNG */
 .client-building-embed-mask--header {
   top: 0;
   left: 0;

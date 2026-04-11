@@ -438,12 +438,17 @@ function BuildingSiteOverlay({ site, zoneId, panelTab, now, onClose, onSelectZon
         role="dialog"
         aria-modal="true"
         aria-labelledby="client-building-title"
+        aria-describedby="client-building-local"
       >
         <div className="client-building-topbar">
-          <span className="client-building-local">Local: {localLine}</span>
-          <h2 id="client-building-title" className="client-building-name">
-            {b.name}
-          </h2>
+          <div className="client-building-topbar-brand">
+            <h2 id="client-building-title" className="client-building-name">
+              {b.name}
+            </h2>
+            <p id="client-building-local" className="client-building-topbar-local">
+              {localLine}
+            </p>
+          </div>
           <button type="button" className="client-building-close" onClick={onClose} aria-label="Close building view">
             ×
           </button>
@@ -477,9 +482,6 @@ function BuildingSiteOverlay({ site, zoneId, panelTab, now, onClose, onSelectZon
         ) : (
           <>
             <div className="client-building-floor">
-              <p className="client-building-floor-heading" aria-hidden="true">
-                {b.name}
-              </p>
               <div className="client-building-floor-inner">
                 <img
                   className="client-building-floor-img"
