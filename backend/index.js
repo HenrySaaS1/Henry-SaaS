@@ -4,20 +4,37 @@ import dotenv from 'dotenv'
 import bcrypt from 'bcryptjs'
 import { prisma } from './lib/prisma.js'
 import { signUserToken, readBearerUserId } from './lib/authTokens.js'
+import { assertProductionEnv } from './lib/productionEnv.js'
 
 dotenv.config()
+assertProductionEnv()
 
 const app = express()
-const PORT = process.env.PORT || 5000
+const PORT = Number(process.env.PORT) || 5000
+
+// Azure App Service sits behind a reverse proxy
+app.set('trust proxy', 1)
+
+const corsOrigin =
+  process.env.NODE_ENV === 'production'
+    ? process.env.CORS_ORIGIN
+    : process.env.CORS_ORIGIN || 'http://localhost:5173'
 
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    origin: corsOrigin,
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization'],
   }),
 )
 app.use(express.json())
+
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+  res.setHeader('X-Frame-Options', 'DENY')
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
+  next()
+})
 
 function userToClient(u) {
   let products = []
@@ -188,6 +205,20 @@ app.post('/api/contact', async (req, res) => {
   }
 })
 
-app.listen(PORT, () => {
-  console.log(`Backend listening on http://localhost:${PORT}`)
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`HENRY API listening on port ${PORT} (${process.env.NODE_ENV || 'development'})`)
 })
+
+async function shutdown(signal) {
+  console.log(`Received ${signal}, closing…`)
+  server.close(() => {
+    prisma
+      .$disconnect()
+      .catch(() => {})
+      .finally(() => process.exit(0))
+  })
+  setTimeout(() => process.exit(1), 10_000).unref()
+}
+
+process.once('SIGTERM', () => shutdown('SIGTERM'))
+process.once('SIGINT', () => shutdown('SIGINT'))

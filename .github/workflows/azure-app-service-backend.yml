@@ -8,8 +8,7 @@
 # App Service → Configuration → Application settings (examples):
 #   DATABASE_URL, JWT_SECRET, CORS_ORIGIN (your Static Web App URL), NODE_ENV=production
 #
-# After first deploy, run migrations once against production DB (local or Azure Cloud Shell):
-#   cd backend && DATABASE_URL="postgresql://..." npx prisma migrate deploy
+# Migrations run on each cold start via npm run start (prisma migrate deploy).
 
 name: Azure App Service — backend API
 

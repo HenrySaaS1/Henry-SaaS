@@ -1,7 +1,13 @@
 const TOKEN_KEY = 'henry_auth_token_v1'
 
 export function getApiBase() {
-  return (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/$/, '')
+  const fromEnv = import.meta.env.VITE_API_URL
+  if (import.meta.env.PROD && (!fromEnv || !String(fromEnv).trim())) {
+    console.error(
+      '[henry] VITE_API_URL is missing. Set it in GitHub Actions (secret) for Azure Static Web Apps.',
+    )
+  }
+  return (fromEnv || 'http://localhost:5000').replace(/\/$/, '')
 }
 
 export function getToken() {

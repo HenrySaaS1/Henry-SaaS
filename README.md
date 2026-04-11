@@ -64,6 +64,8 @@ You get a **Static Web App** URL for the React site and an **App Service** URL f
    - **Configuration → General settings → Startup Command**: `npm run start`  
      (`start` runs `prisma migrate deploy` then the server.)
 
+   **Production safeguards:** With `NODE_ENV=production`, the API **exits on startup** if settings are wrong: PostgreSQL `DATABASE_URL`, a strong `JWT_SECRET` (16+ characters, not the dev default), and `CORS_ORIGIN` must be your Static Web App URL starting with `https://`. Use **Log stream** on the Web App if the container stops right after deploy.
+
 4. **Static Web App** — connect the **same GitHub repo**; framework “Custom”, or rely on the workflow below.
    - After creation, note the site URL (e.g. `https://<name>.azurestaticapps.net`).
 
