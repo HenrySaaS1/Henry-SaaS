@@ -484,6 +484,9 @@ function BuildingSiteOverlay({ site, zoneId, panelTab, now, onClose, onSelectZon
                   alt={`Floor plan — ${b.name}`}
                   draggable={false}
                 />
+                {/* Cover baked-in chrome on the reference PNG (not from React). */}
+                <div className="client-building-embed-mask client-building-embed-mask--time" aria-hidden />
+                <div className="client-building-embed-mask client-building-embed-mask--bars" aria-hidden />
                 {b.zones.map((z) => (
                   <button
                     key={z.id}

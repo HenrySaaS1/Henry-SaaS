@@ -2648,8 +2648,34 @@ a {
   user-select: none;
 }
 
+/* Hide duplicate labels baked into site-floor-plan-us.png (React supplies header + footer tabs). */
+.client-building-embed-mask {
+  position: absolute;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.client-building-embed-mask--time {
+  top: 1.25%;
+  left: 0.5%;
+  width: 46%;
+  height: 9.5%;
+  background: linear-gradient(155deg, #ea580c 0%, #f97316 45%, #ea580c 100%);
+  border-radius: 3px;
+}
+
+.client-building-embed-mask--bars {
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 13.5%;
+  background: linear-gradient(0deg, #fb923c 0%, #f97316 35%, #ea580c 100%);
+  border-radius: 0 0 10px 10px;
+}
+
 .client-building-zone {
   position: absolute;
+  z-index: 2;
   margin: 0;
   padding: 0;
   border: none;
