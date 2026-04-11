@@ -113,6 +113,24 @@ const BUILDING_FOOTER_TABS = [
   { id: 'settings', label: 'Settings' },
 ]
 
+/** Live clock in the site’s zone (IANA). Falls back if the runtime lacks the zone. */
+function formatSiteLocalTime(date, timeZone) {
+  if (!timeZone) return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      timeZone,
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      timeZoneName: 'short',
+    }).format(date)
+  } catch {
+    return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+  }
+}
+
 /** Demo global sites — replace with API data for your tenant. */
 const GLOBAL_SITES = [
   {
@@ -121,7 +139,7 @@ const GLOBAL_SITES = [
     flagEmoji: '🇺🇸',
     leadRole: 'Site Director',
     leadName: 'Alex Morgan',
-    localTime: 'CST',
+    timeZone: 'America/Chicago',
     employees: 120,
     efficiency: 88,
     address: '100 Sample Industrial Pkwy, Suite 200, Minneapolis, MN 55401 USA',
@@ -133,7 +151,7 @@ const GLOBAL_SITES = [
       footerBlurb: {
         status:
           'Production cells mostly green. Rack hall B within spec; weld East in planned maintenance.',
-        safety: 'Last floor walkthrough 06:00 CST · 0 open near-miss actions for this building.',
+        safety: 'Last floor walkthrough 06:00 local · 0 open near-miss actions for this building.',
         security: 'Perimeter logged · 14 badged entries in the last 4 hours.',
         settings: 'Map layers and zone labels are demo data — swap in your CAD or BIM exports.',
       },
@@ -178,7 +196,7 @@ const GLOBAL_SITES = [
     flagEmoji: '🇮🇪',
     leadRole: 'Site Lead',
     leadName: 'Jordan Lee',
-    localTime: 'Irish Standard Time',
+    timeZone: 'Europe/Dublin',
     employees: 78,
     efficiency: 84,
     address: 'Unit 3 Demo Business Park, 42 Placeholder Rd, Dublin 2, D02 XY00, Ireland',
@@ -232,7 +250,7 @@ const GLOBAL_SITES = [
     flagEmoji: '🇨🇷',
     leadRole: 'Site Lead',
     leadName: 'Sam Rivera',
-    localTime: 'CST',
+    timeZone: 'America/Costa_Rica',
     employees: 56,
     efficiency: 78,
     address: 'Edificio Demo 12, Zona Ejemplo, San José 10101, Costa Rica',
@@ -271,7 +289,7 @@ const GLOBAL_SITES = [
     flagEmoji: '🇮🇱',
     leadRole: 'Site Lead',
     leadName: 'Taylor Brooks',
-    localTime: 'Israel Daylight Time',
+    timeZone: 'Asia/Jerusalem',
     employees: 34,
     efficiency: 75,
     address: '15 Mock Tech Park, Building B, Herzliya 4672501, Israel',
@@ -310,7 +328,7 @@ const GLOBAL_SITES = [
     flagEmoji: '🇮🇳',
     leadRole: 'Site Lead',
     leadName: 'Priya Shah',
-    localTime: 'Indian Standard Time',
+    timeZone: 'Asia/Kolkata',
     employees: 12,
     efficiency: 82,
     address: 'Floor 4, Sample IT Tower, Indiranagar, Bengaluru, Karnataka 560038, India',
@@ -349,7 +367,7 @@ const GLOBAL_SITES = [
     flagEmoji: '🇲🇾',
     leadRole: 'Site Lead',
     leadName: 'Casey Ng',
-    localTime: 'Malaysia Time',
+    timeZone: 'Asia/Kuala_Lumpur',
     employees: null,
     efficiency: null,
     address: 'TBD — demo site (address to be confirmed)',
@@ -400,11 +418,12 @@ function buildingMachineryToneClass(status) {
   return 'client-building-machinery-badge--idle'
 }
 
-function BuildingSiteOverlay({ site, zoneId, panelTab, onClose, onSelectZone, onSelectTab }) {
+function BuildingSiteOverlay({ site, zoneId, panelTab, now, onClose, onSelectZone, onSelectTab }) {
   const b = site?.building
   if (!b) return null
   const activeZone = zoneId ? b.zones.find((z) => z.id === zoneId) : null
   const panelCopy = b.footerBlurb?.[panelTab] ?? '—'
+  const localLine = formatSiteLocalTime(now, site.timeZone)
 
   return (
     <div
@@ -421,7 +440,7 @@ function BuildingSiteOverlay({ site, zoneId, panelTab, onClose, onSelectZone, on
         aria-labelledby="client-building-title"
       >
         <div className="client-building-topbar">
-          <span className="client-building-local">Local time: {site.localTime}</span>
+          <span className="client-building-local">Local: {localLine}</span>
           <h2 id="client-building-title" className="client-building-name">
             {b.name}
           </h2>
@@ -489,19 +508,25 @@ function BuildingSiteOverlay({ site, zoneId, panelTab, onClose, onSelectZone, on
           </>
         )}
 
-        <div className="client-building-footer">
-          {BUILDING_FOOTER_TABS.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              className={`client-building-footer-btn${panelTab === t.id ? ' client-building-footer-btn--active' : ''}`}
-              onClick={() => onSelectTab(t.id)}
-            >
-              {t.label}
-            </button>
-          ))}
+        <div className="client-building-footer-panel">
+          <div className="client-building-tablist" role="tablist" aria-label="Building summary">
+            {BUILDING_FOOTER_TABS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={panelTab === t.id}
+                className={`client-building-tab${panelTab === t.id ? ' client-building-tab--active' : ''}`}
+                onClick={() => onSelectTab(t.id)}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <div className="client-building-tab-panel" role="tabpanel">
+            <p className="client-building-tab-panel-text">{panelCopy}</p>
+          </div>
         </div>
-        <p className="client-building-footer-copy">{panelCopy}</p>
       </div>
     </div>
   )
@@ -1072,7 +1097,7 @@ export default function ClientDashboard({ user, onSignOut }) {
                       <dl className="client-site-metrics">
                         <div>
                           <dt>Local time</dt>
-                          <dd>{site.localTime}</dd>
+                          <dd>{formatSiteLocalTime(nowTick, site.timeZone)}</dd>
                         </div>
                         <div>
                           <dt>No. of active employees</dt>
@@ -1724,6 +1749,7 @@ export default function ClientDashboard({ user, onSignOut }) {
           site={buildingSite}
           zoneId={buildingZoneId}
           panelTab={buildingPanelTab}
+          now={nowTick}
           onClose={closeBuilding}
           onSelectZone={setBuildingZoneId}
           onSelectTab={setBuildingPanelTab}
