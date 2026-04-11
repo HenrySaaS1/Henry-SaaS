@@ -11,7 +11,8 @@
     "db:generate": "node scripts/prisma-generate.mjs",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
-    "db:seed": "prisma db seed"
+    "db:seed": "prisma db seed",
+    "db:setup": "powershell -ExecutionPolicy Bypass -File ../scripts/setup-local-db.ps1"
   },
   "keywords": [],
   "author": "",

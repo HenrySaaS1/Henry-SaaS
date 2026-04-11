@@ -4,13 +4,38 @@ React frontend and Node.js backend scaffold that matches your demo landing page 
 
 ## Run locally
 
-1. **PostgreSQL** — the app uses PostgreSQL (same as Azure production). Easiest option:
+1. **PostgreSQL** — the app uses PostgreSQL (same as Azure production). Your `backend/.env` must use a **`postgresql://...`** URL (not SQLite `file:...`).
+
+   **Option A — Docker (simplest)**  
+   From the repo root:
 
    ```bash
    docker compose up -d
    ```
 
-   Or install PostgreSQL locally and create a database.
+   **Option B — Setup script (Windows)**  
+   From the repo root:
+
+   ```powershell
+   cd backend
+   npm run db:setup
+   ```
+
+   This starts Docker Compose if `docker` is available, then runs `prisma migrate deploy`. If Docker is not installed, it prints alternatives.
+
+   **Option C — PostgreSQL installed on Windows**  
+   Example: `winget install PostgreSQL.PostgreSQL.16`, then create the app user and database (same as Docker defaults):
+
+   ```powershell
+   & "C:\Program Files\PostgreSQL\16\bin\psql.exe" -U postgres -f scripts/init-henry-db.sql
+   ```
+
+   Adjust the path/version if yours differs. Then set `DATABASE_URL` in `backend/.env` to:
+
+   `postgresql://henry:henry@localhost:5432/henry?schema=public`
+
+   **Option D — Cloud (no local server)**  
+   Use a free [Neon](https://neon.tech) project, copy the connection string into `DATABASE_URL`, and append `?sslmode=require` if the host requires SSL.
 
 2. **Backend**
 
