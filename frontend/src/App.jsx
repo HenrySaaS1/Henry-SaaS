@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect } from 'react'
 import ClientDashboard from './ClientDashboard.jsx'
 import { DEFAULT_PRODUCT_IDS } from './productCatalog.js'
+import { mapUserFromApi } from './mapUserFromApi.js'
 import { apiJson, getToken, setToken, clearAuth } from './apiClient.js'
 import heroMainImage from './assets/hero-main.png'
 import aiIconImage from './assets/uploads/img-1.png'
@@ -11,23 +12,6 @@ import laptopTeamImage from './assets/uploads/img-7.png'
 import pharmaImage from './assets/uploads/img-8.png'
 import medicalDevicesImage from './assets/uploads/img-10.png'
 import aboutHenryImage from './assets/about-henry.png'
-
-function mapUserFromApi(user) {
-  if (!user || typeof user.email !== 'string') return null
-  return {
-    email: user.email,
-    company: user.company,
-    slug: typeof user.slug === 'string' ? user.slug : 'generic',
-    products:
-      Array.isArray(user.products) && user.products.length > 0 ? user.products : DEFAULT_PRODUCT_IDS,
-    planId:
-      typeof user.planId === 'string' && ['basic', 'plus', 'premium'].includes(user.planId)
-        ? user.planId
-        : null,
-    createdAt: typeof user.createdAt === 'string' ? user.createdAt : null,
-    lastLoginAt: typeof user.lastLoginAt === 'string' ? user.lastLoginAt : null,
-  }
-}
 
 /** Default HENRY modules suggested when registering from a pricing tier. */
 const PLAN_REGISTRATION_DEFAULTS = {

@@ -178,11 +178,72 @@ const TAB_HEADINGS = {
   account: { title: 'Account', sub: 'Your workspace profile and subscription context.' },
 }
 
+const ONBOARD_KEY = (email) => `henry_onboard_${String(email).toLowerCase()}`
+
+function loadOnboard(email) {
+  try {
+    const raw = sessionStorage.getItem(ONBOARD_KEY(email))
+    if (!raw) return { done: [], hidden: false }
+    const j = JSON.parse(raw)
+    return {
+      done: Array.isArray(j.done) ? j.done : [],
+      hidden: Boolean(j.hidden),
+    }
+  } catch {
+    return { done: [], hidden: false }
+  }
+}
+
+function saveOnboard(email, state) {
+  try {
+    sessionStorage.setItem(
+      ONBOARD_KEY(email),
+      JSON.stringify({ done: state.done, hidden: state.hidden }),
+    )
+  } catch {
+    /* private mode */
+  }
+}
+
+/** Post–sign-in checklist: drives users into each major area of the workspace. */
+const ONBOARD_STEPS = [
+  {
+    id: 'alerts',
+    title: 'Skim AI alerts',
+    body: 'See how high-priority line issues surface with severity and timestamps.',
+    tab: 'alerts',
+  },
+  {
+    id: 'reports',
+    title: 'Open a shift report',
+    body: 'Review how HENRY rolls up throughput, quality, and labor for a shift.',
+    tab: 'reports',
+  },
+  {
+    id: 'insights',
+    title: 'Read one insight',
+    body: 'Correlations and forecasts show how metrics connect across cells.',
+    tab: 'insights',
+  },
+  {
+    id: 'export',
+    title: 'Try a quick export',
+    body: 'Kick off a snapshot export from the dashboard (demo — no file yet).',
+    tab: 'dashboard',
+    action: 'export',
+  },
+]
+
 export default function ClientDashboard({ user, onSignOut }) {
   const [tab, setTab] = useState('dashboard')
   const [toast, setToast] = useState('')
   const [nowTick, setNowTick] = useState(() => new Date())
+  const [onboard, setOnboard] = useState(() => loadOnboard(user.email))
   const chartUid = useId().replace(/:/g, '')
+
+  useEffect(() => {
+    setOnboard(loadOnboard(user.email))
+  }, [user.email])
 
   useEffect(() => {
     const t = setInterval(() => setNowTick(new Date()), 30_000)
@@ -218,6 +279,33 @@ export default function ClientDashboard({ user, onSignOut }) {
     }
     setToast(messages[id] || 'Done.')
   }
+
+  const markOnboardStep = (id) => {
+    setOnboard((prev) => {
+      if (prev.done.includes(id)) return prev
+      const next = { ...prev, done: [...prev.done, id] }
+      saveOnboard(user.email, next)
+      return next
+    })
+  }
+
+  const dismissOnboard = () => {
+    setOnboard((prev) => {
+      const next = { ...prev, hidden: true }
+      saveOnboard(user.email, next)
+      return next
+    })
+  }
+
+  const runOnboardStep = (step) => {
+    setTab(step.tab)
+    if (step.action === 'export') {
+      runQuickAction('export')
+    }
+    markOnboardStep(step.id)
+  }
+
+  const onboardAllDone = ONBOARD_STEPS.every((s) => onboard.done.includes(s.id))
 
   return (
     <div className="client-app">
@@ -315,6 +403,63 @@ export default function ClientDashboard({ user, onSignOut }) {
                 </p>
               </div>
             </div>
+          ) : null}
+
+          {tab === 'dashboard' && !onboard.hidden ? (
+            onboardAllDone ? (
+              <div className="client-onboard-complete">
+                <div>
+                  <strong>You&apos;re set.</strong>
+                  <span> You&apos;ve opened every area of this demo workspace.</span>
+                </div>
+                <button type="button" className="client-onboard-dismiss" onClick={dismissOnboard}>
+                  Hide checklist
+                </button>
+              </div>
+            ) : (
+              <section className="client-onboard" aria-labelledby="client-onboard-title">
+                <div className="client-onboard-head">
+                  <div>
+                    <h2 id="client-onboard-title" className="client-onboard-title">
+                      Getting started
+                    </h2>
+                    <p className="client-onboard-sub">
+                      Four quick steps — each jumps to the right place in your workspace.
+                    </p>
+                  </div>
+                  <button type="button" className="client-onboard-dismiss" onClick={dismissOnboard}>
+                    Dismiss
+                  </button>
+                </div>
+                <ol className="client-onboard-list">
+                  {ONBOARD_STEPS.map((step, idx) => {
+                    const done = onboard.done.includes(step.id)
+                    return (
+                      <li key={step.id} className={`client-onboard-step${done ? ' client-onboard-step--done' : ''}`}>
+                        <span className="client-onboard-idx" aria-hidden="true">
+                          {done ? '✓' : idx + 1}
+                        </span>
+                        <div className="client-onboard-step-body">
+                          <h3 className="client-onboard-step-title">{step.title}</h3>
+                          <p className="client-onboard-step-text">{step.body}</p>
+                        </div>
+                        {done ? (
+                          <span className="client-onboard-done-label">Done</span>
+                        ) : (
+                          <button
+                            type="button"
+                            className="client-onboard-go"
+                            onClick={() => runOnboardStep(step)}
+                          >
+                            {step.action === 'export' ? 'Run demo' : 'Go there'}
+                          </button>
+                        )}
+                      </li>
+                    )
+                  })}
+                </ol>
+              </section>
+            )
           ) : null}
 
           {tab === 'dashboard' ? (
@@ -586,11 +731,66 @@ export default function ClientDashboard({ user, onSignOut }) {
                   <dd>{formatSessionDate(user.lastLoginAt)}</dd>
                 </div>
               </dl>
+              <div className="client-account-actions" aria-label="Account actions">
+                <button
+                  type="button"
+                  className="client-account-action-card"
+                  onClick={() =>
+                    setToast('Connect Stripe, NetSuite, or your billing portal when you wire payments.')
+                  }
+                >
+                  <span className="client-account-action-title">Subscription &amp; billing</span>
+                  <span className="client-account-action-desc">Plan, invoices, and payment method</span>
+                </button>
+                <button
+                  type="button"
+                  className="client-account-action-card"
+                  onClick={() =>
+                    setToast('Add password reset and MFA here (e.g. email link + TOTP) for production.')
+                  }
+                >
+                  <span className="client-account-action-title">Security</span>
+                  <span className="client-account-action-desc">Password, sessions, and devices</span>
+                </button>
+                <button
+                  type="button"
+                  className="client-account-action-card"
+                  onClick={() =>
+                    setToast('Implementation guide: link your runbook, SCADA tags, and escalation policy.')
+                  }
+                >
+                  <span className="client-account-action-title">Implementation</span>
+                  <span className="client-account-action-desc">Integrations and go-live checklist</span>
+                </button>
+              </div>
               <p className="client-account-foot">
-                Password and billing changes can be added here as your admin flows grow.
+                These tiles are ready for your real admin APIs and billing provider.
               </p>
             </div>
           ) : null}
+
+          <footer className="client-workspace-help">
+            <p className="client-workspace-help-text">
+              <strong>Workspace help</strong> — demo data only. For production, connect historians, MES, and
+              your alert destinations.
+            </p>
+            <div className="client-workspace-help-actions">
+              <button
+                type="button"
+                className="client-help-link"
+                onClick={() => setTab('alerts')}
+              >
+                Jump to alerts
+              </button>
+              <button
+                type="button"
+                className="client-help-link"
+                onClick={() => setToast('Document your internal support channel (Slack, PagerDuty, etc.).')}
+              >
+                Escalation policy
+              </button>
+            </div>
+          </footer>
         </main>
       </div>
     </div>
