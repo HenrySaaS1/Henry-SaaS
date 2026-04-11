@@ -477,6 +477,9 @@ function BuildingSiteOverlay({ site, zoneId, panelTab, now, onClose, onSelectZon
         ) : (
           <>
             <div className="client-building-floor">
+              <p className="client-building-floor-heading" aria-hidden="true">
+                {b.name}
+              </p>
               <div className="client-building-floor-inner">
                 <img
                   className="client-building-floor-img"
@@ -484,8 +487,8 @@ function BuildingSiteOverlay({ site, zoneId, panelTab, now, onClose, onSelectZon
                   alt={`Floor plan — ${b.name}`}
                   draggable={false}
                 />
-                {/* Cover baked-in chrome on the reference PNG (not from React). */}
-                <div className="client-building-embed-mask client-building-embed-mask--time" aria-hidden />
+                {/* Cover baked-in header/footer chrome on the reference PNG (React supplies labels). */}
+                <div className="client-building-embed-mask client-building-embed-mask--header" aria-hidden />
                 <div className="client-building-embed-mask client-building-embed-mask--bars" aria-hidden />
                 {b.zones.map((z) => (
                   <button

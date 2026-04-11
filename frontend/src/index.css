@@ -2627,8 +2627,10 @@ a {
   flex: 1;
   min-height: 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 0.45rem;
 }
 
 .client-building-floor-inner {
@@ -2655,12 +2657,27 @@ a {
   z-index: 1;
 }
 
-.client-building-embed-mask--time {
+.client-building-floor-heading {
+  margin: 0;
+  padding: 0 0.5rem;
+  font-size: 1.12rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-align: center;
+  color: #0f172a;
+  line-height: 1.25;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+  flex-shrink: 0;
+}
+
+/* Full-width strip: hides embedded Local Time + clipped title on PNG; real title is .client-building-floor-heading */
+.client-building-embed-mask--header {
   top: 0;
   left: 0;
-  width: 56%;
-  height: 22%;
-  background: linear-gradient(160deg, #ea580c 0%, #f97316 42%, #ea580c 100%);
+  right: 0;
+  width: 100%;
+  height: 20%;
+  background: linear-gradient(175deg, #ea580c 0%, #f97316 38%, #ea580c 100%);
 }
 
 .client-building-embed-mask--bars {
