@@ -2,6 +2,7 @@
 import ClientDashboard from './ClientDashboard.jsx'
 import { DEFAULT_PRODUCT_IDS } from './productCatalog.js'
 import { mapUserFromApi } from './mapUserFromApi.js'
+import { AUTH_BYPASS, bypassDemoUser } from './authBypass.js'
 import { apiJson, getToken, setToken, clearAuth } from './apiClient.js'
 import heroMainImage from './assets/hero-main.png'
 import aiIconImage from './assets/uploads/img-1.png'
@@ -295,9 +296,11 @@ function App() {
   const [authMode, setAuthMode] = useState('signup')
   const [signupFromPlan, setSignupFromPlan] = useState(null)
   const [signupDashTab, setSignupDashTab] = useState('dashboard')
-  const [currentUser, setCurrentUser] = useState(null)
+  const [currentUser, setCurrentUser] = useState(() => (AUTH_BYPASS ? bypassDemoUser() : null))
 
   useEffect(() => {
+    if (AUTH_BYPASS) return
+
     const ac = new AbortController()
 
     ;(async () => {
@@ -323,6 +326,10 @@ function App() {
   const signOut = () => {
     clearAuth()
     setCurrentUser(null)
+  }
+
+  const enterBypassWorkspace = () => {
+    setCurrentUser(bypassDemoUser())
   }
 
   const updateField = (event) => {
@@ -480,13 +487,24 @@ function App() {
           <a href="#contact">CONTACT</a>
         </nav>
         <div className="topbar-actions">
+          {AUTH_BYPASS ? (
+            <button type="button" className="btn-dark" onClick={enterBypassWorkspace}>
+              Open workspace
+            </button>
+          ) : null}
           <a className="btn-contact-nav" href="#request-demo">
             Request a demo
           </a>
-          <button type="button" className="btn-signin-nav" onClick={() => openAuthModal('signin')}>
-            Sign in
-          </button>
-          <button className="btn-dark" onClick={() => openAuthModal('signup')}>Get Started</button>
+          {!AUTH_BYPASS ? (
+            <>
+              <button type="button" className="btn-signin-nav" onClick={() => openAuthModal('signin')}>
+                Sign in
+              </button>
+              <button className="btn-dark" onClick={() => openAuthModal('signup')}>
+                Get Started
+              </button>
+            </>
+          ) : null}
         </div>
       </header>
 
@@ -499,7 +517,12 @@ function App() {
         <div className="overlay">
           <h1>When You Need Answers Now<br />ASK HENRY</h1>
           <p>Get real-time insights, reduce downtime, and make smarter manufacturing decisions instantly.</p>
-          <button className="btn-primary" onClick={() => openAuthModal('signup')}>Get Started</button>
+          <button
+            className="btn-primary"
+            onClick={() => (AUTH_BYPASS ? enterBypassWorkspace() : openAuthModal('signup'))}
+          >
+            {AUTH_BYPASS ? 'Open workspace' : 'Get Started'}
+          </button>
         </div>
       </section>
 
@@ -531,9 +554,11 @@ function App() {
               <button
                 type="button"
                 className="btn-pricing-cta"
-                onClick={() => openAuthModal('signup', { planId: tier.planId })}
+                onClick={() =>
+                  AUTH_BYPASS ? enterBypassWorkspace() : openAuthModal('signup', { planId: tier.planId })
+                }
               >
-                Get started
+                {AUTH_BYPASS ? 'Open workspace' : 'Get started'}
               </button>
             </article>
           ))}

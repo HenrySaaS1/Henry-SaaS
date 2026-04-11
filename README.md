@@ -64,6 +64,8 @@ React frontend and Node.js backend scaffold that matches your demo landing page 
 
 Frontend runs at `http://localhost:5173` and API runs at `http://localhost:5000`.
 
+**Dev shortcut:** `npm run dev` opens the **client workspace immediately** without sign-in (preview user). To test real login in dev, add `VITE_BYPASS_AUTH=false` to `frontend/.env`. Production builds do **not** use bypass unless you set `VITE_BYPASS_AUTH=true` at build time.
+
 ## API endpoints
 
 - `GET /api/health`
