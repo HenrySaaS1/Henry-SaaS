@@ -106,6 +106,13 @@ const REPORT_RANGE_PRESETS = [
 /** Demo floor asset — same PNG used as placeholder map for all sites until you upload per-site plans. */
 const DEFAULT_FLOOR_PLAN_SRC = '/site-floor-plan-us.png'
 
+const BUILDING_FOOTER_TABS = [
+  { id: 'status', label: 'Status' },
+  { id: 'safety', label: 'Safety' },
+  { id: 'security', label: 'Security' },
+  { id: 'settings', label: 'Settings' },
+]
+
 /** Live clock in the site’s zone (IANA). Falls back if the runtime lacks the zone. */
 function formatSiteLocalTime(date, timeZone) {
   if (!timeZone) return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
@@ -141,6 +148,13 @@ const GLOBAL_SITES = [
     building: {
       name: 'US Headquarters',
       floorPlanSrc: DEFAULT_FLOOR_PLAN_SRC,
+      footerBlurb: {
+        status:
+          'Production cells mostly green. Rack hall B within spec; weld East in planned maintenance.',
+        safety: 'Last floor walkthrough 06:00 local · 0 open near-miss actions for this building.',
+        security: 'Perimeter logged · 14 badged entries in the last 4 hours.',
+        settings: 'Map layers and zone labels are demo data — swap in your CAD or BIM exports.',
+      },
       zones: [
         {
           id: 'us-rack-b',
@@ -191,6 +205,12 @@ const GLOBAL_SITES = [
     building: {
       name: 'Dublin Manufacturing Center',
       floorPlanSrc: DEFAULT_FLOOR_PLAN_SRC,
+      footerBlurb: {
+        status: 'Fill line holding steady; packaging lane C trending above target takt.',
+        safety: 'Chemical store inspection due tomorrow · eyewash tested today.',
+        security: 'Visitor escort policy active · 3 contractors on floor.',
+        settings: 'EU data residency profile (demo) — align retention with DPA.',
+      },
       zones: [
         {
           id: 'ie-fill',
@@ -239,6 +259,12 @@ const GLOBAL_SITES = [
     building: {
       name: 'San José Assembly Hub',
       floorPlanSrc: DEFAULT_FLOOR_PLAN_SRC,
+      footerBlurb: {
+        status: 'Regional hub: two cells in run, one idle for die swap.',
+        safety: 'Ergonomics audit scheduled next week.',
+        security: 'Night shift handover complete.',
+        settings: 'Spanish + English UI labels supported (demo).',
+      },
       zones: [
         {
           id: 'cr-press',
@@ -272,6 +298,12 @@ const GLOBAL_SITES = [
     building: {
       name: 'Herzliya R&D & light mfg',
       floorPlanSrc: DEFAULT_FLOOR_PLAN_SRC,
+      footerBlurb: {
+        status: 'Prototype line idle; pilot build window Friday.',
+        safety: 'Laser enclosure interlocks tested.',
+        security: 'SCIF zone badge required beyond checkpoint 2 (demo).',
+        settings: 'Link Jira epics to floor assets when wired.',
+      },
       zones: [
         {
           id: 'il-lab',
@@ -305,6 +337,12 @@ const GLOBAL_SITES = [
     building: {
       name: 'Bengaluru support & NOC',
       floorPlanSrc: DEFAULT_FLOOR_PLAN_SRC,
+      footerBlurb: {
+        status: 'Remote monitoring for APAC plants · no local heavy assets in this demo.',
+        safety: 'Fire drill logged last quarter.',
+        security: '24/7 access control on floor 4.',
+        settings: 'Replace this map with your India floor when co-locating gear.',
+      },
       zones: [
         {
           id: 'in-noc',
@@ -338,6 +376,12 @@ const GLOBAL_SITES = [
     building: {
       name: 'Kuala Lumpur — planned facility',
       floorPlanSrc: DEFAULT_FLOOR_PLAN_SRC,
+      footerBlurb: {
+        status: 'Footprint TBD · using reference layout until CAD is uploaded.',
+        safety: '—',
+        security: '—',
+        settings: 'Assign building name, zones, and image per site from admin API.',
+      },
       zones: [
         {
           id: 'my-placeholder',
@@ -374,10 +418,12 @@ function buildingMachineryToneClass(status) {
   return 'client-building-machinery-badge--idle'
 }
 
-function BuildingSiteOverlay({ site, zoneId, onClose, onSelectZone }) {
+function BuildingSiteOverlay({ site, zoneId, panelTab, now, onClose, onSelectZone, onSelectTab }) {
   const b = site?.building
   if (!b) return null
   const activeZone = zoneId ? b.zones.find((z) => z.id === zoneId) : null
+  const panelCopy = b.footerBlurb?.[panelTab] ?? '—'
+  const localLine = formatSiteLocalTime(now, site.timeZone)
 
   return (
     <div
@@ -394,6 +440,7 @@ function BuildingSiteOverlay({ site, zoneId, onClose, onSelectZone }) {
         aria-labelledby="client-building-title"
       >
         <div className="client-building-topbar">
+          <span className="client-building-local">Local: {localLine}</span>
           <h2 id="client-building-title" className="client-building-name">
             {b.name}
           </h2>
@@ -460,6 +507,26 @@ function BuildingSiteOverlay({ site, zoneId, onClose, onSelectZone }) {
             <p className="client-building-hint">Tap a highlighted zone to open machinery / cell detail.</p>
           </>
         )}
+
+        <div className="client-building-footer-panel">
+          <div className="client-building-tablist" role="tablist" aria-label="Building summary">
+            {BUILDING_FOOTER_TABS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={panelTab === t.id}
+                className={`client-building-tab${panelTab === t.id ? ' client-building-tab--active' : ''}`}
+                onClick={() => onSelectTab(t.id)}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <div className="client-building-tab-panel" role="tabpanel">
+            <p className="client-building-tab-panel-text">{panelCopy}</p>
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -707,6 +774,7 @@ export default function ClientDashboard({ user, onSignOut }) {
   const [notifOpen, setNotifOpen] = useState(false)
   const [buildingSiteId, setBuildingSiteId] = useState(null)
   const [buildingZoneId, setBuildingZoneId] = useState(null)
+  const [buildingPanelTab, setBuildingPanelTab] = useState('status')
   const notifWrapRef = useRef(null)
   const chartUid = useId().replace(/:/g, '')
 
@@ -715,6 +783,7 @@ export default function ClientDashboard({ user, onSignOut }) {
   const openBuilding = (site) => {
     setBuildingSiteId(site.id)
     setBuildingZoneId(null)
+    setBuildingPanelTab('status')
   }
 
   const closeBuilding = () => {
@@ -1679,8 +1748,11 @@ export default function ClientDashboard({ user, onSignOut }) {
         <BuildingSiteOverlay
           site={buildingSite}
           zoneId={buildingZoneId}
+          panelTab={buildingPanelTab}
+          now={nowTick}
           onClose={closeBuilding}
           onSelectZone={setBuildingZoneId}
+          onSelectTab={setBuildingPanelTab}
         />
       ) : null}
     </div>
