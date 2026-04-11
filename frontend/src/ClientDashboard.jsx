@@ -697,6 +697,54 @@ export default function ClientDashboard({ user, onSignOut }) {
           </div>
 
           {tab === 'dashboard' ? (
+            <section className="client-sites-section client-sites-section--top" aria-labelledby="global-sites-title">
+              <div className="client-sites-section-head">
+                <h2 id="global-sites-title" className="client-sites-section-title">
+                  {user.company}
+                </h2>
+                <p className="client-sites-section-sub">
+                  Global footprint — site leadership, local time, headcount, and efficiency by region.
+                </p>
+              </div>
+              <div className="client-sites-grid">
+                {GLOBAL_SITES.map((site) => (
+                  <article key={site.id} className="client-site-card">
+                    <h3 className="client-site-country">{site.country}</h3>
+                    <div className="client-site-flag" aria-hidden="true" title={site.country}>
+                      <span className="client-site-flag-emoji">{site.flagEmoji}</span>
+                    </div>
+                    <p className="client-site-lead">
+                      {site.leadRole} — <strong>{site.leadName}</strong>
+                    </p>
+                    <dl className="client-site-metrics">
+                      <div>
+                        <dt>Local time</dt>
+                        <dd>{site.localTime}</dd>
+                      </div>
+                      <div>
+                        <dt>No. of active employees</dt>
+                        <dd>{site.employees != null ? site.employees : '—'}</dd>
+                      </div>
+                      <div>
+                        <dt>Operational efficiency</dt>
+                        <dd>{site.efficiency != null ? `${site.efficiency}%` : '—'}</dd>
+                      </div>
+                    </dl>
+                    <p className="client-site-address">
+                      <span className="client-site-address-label">Address</span>
+                      {site.address}
+                    </p>
+                    <a className="client-site-phone" href={`tel:${site.phoneTel}`}>
+                      <SitePhoneIcon />
+                      <span>{site.phoneDisplay}</span>
+                    </a>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {tab === 'dashboard' ? (
             <div className="client-welcome" role="status">
               <div className="client-welcome-inner">
                 <p className="client-welcome-greet">Welcome back, {greetName}</p>
@@ -789,52 +837,6 @@ export default function ClientDashboard({ user, onSignOut }) {
                   </div>
                 ))}
               </div>
-
-              <section className="client-sites-section" aria-labelledby="global-sites-title">
-                <div className="client-sites-section-head">
-                  <h2 id="global-sites-title" className="client-sites-section-title">
-                    {user.company}
-                  </h2>
-                  <p className="client-sites-section-sub">
-                    Global footprint — site leadership, local time, headcount, and efficiency by region.
-                  </p>
-                </div>
-                <div className="client-sites-grid">
-                  {GLOBAL_SITES.map((site) => (
-                    <article key={site.id} className="client-site-card">
-                      <h3 className="client-site-country">{site.country}</h3>
-                      <div className="client-site-flag" aria-hidden="true" title={site.country}>
-                        <span className="client-site-flag-emoji">{site.flagEmoji}</span>
-                      </div>
-                      <p className="client-site-lead">
-                        {site.leadRole} — <strong>{site.leadName}</strong>
-                      </p>
-                      <dl className="client-site-metrics">
-                        <div>
-                          <dt>Local time</dt>
-                          <dd>{site.localTime}</dd>
-                        </div>
-                        <div>
-                          <dt>No. of active employees</dt>
-                          <dd>{site.employees != null ? site.employees : '—'}</dd>
-                        </div>
-                        <div>
-                          <dt>Operational efficiency</dt>
-                          <dd>{site.efficiency != null ? `${site.efficiency}%` : '—'}</dd>
-                        </div>
-                      </dl>
-                      <p className="client-site-address">
-                        <span className="client-site-address-label">Address</span>
-                        {site.address}
-                      </p>
-                      <a className="client-site-phone" href={`tel:${site.phoneTel}`}>
-                        <SitePhoneIcon />
-                        <span>{site.phoneDisplay}</span>
-                      </a>
-                    </article>
-                  ))}
-                </div>
-              </section>
 
               <div className="client-line-snapshot" aria-label="Line health snapshot">
                 {PRODUCTION_LINES.slice(0, 3).map((line) => (
