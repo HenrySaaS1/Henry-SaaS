@@ -2656,12 +2656,11 @@ a {
 }
 
 .client-building-embed-mask--time {
-  top: 1.25%;
-  left: 0.5%;
-  width: 46%;
-  height: 9.5%;
-  background: linear-gradient(155deg, #ea580c 0%, #f97316 45%, #ea580c 100%);
-  border-radius: 3px;
+  top: 0;
+  left: 0;
+  width: 56%;
+  height: 22%;
+  background: linear-gradient(160deg, #ea580c 0%, #f97316 42%, #ea580c 100%);
 }
 
 .client-building-embed-mask--bars {
