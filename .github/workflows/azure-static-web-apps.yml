@@ -30,6 +30,7 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: upload
           app_location: /frontend
+          app_build_command: 'npm ci && npm run build'
           api_location: ''
           output_location: dist
         env:
