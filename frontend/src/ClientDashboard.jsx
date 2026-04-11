@@ -103,6 +103,16 @@ const REPORT_RANGE_PRESETS = [
   { id: 'mtd', label: 'Month to date' },
 ]
 
+/** Demo floor asset — same PNG used as placeholder map for all sites until you upload per-site plans. */
+const DEFAULT_FLOOR_PLAN_SRC = '/site-floor-plan-us.png'
+
+const BUILDING_FOOTER_TABS = [
+  { id: 'status', label: 'Status' },
+  { id: 'safety', label: 'Safety' },
+  { id: 'security', label: 'Security' },
+  { id: 'settings', label: 'Settings' },
+]
+
 /** Demo global sites — replace with API data for your tenant. */
 const GLOBAL_SITES = [
   {
@@ -117,6 +127,50 @@ const GLOBAL_SITES = [
     address: '100 Sample Industrial Pkwy, Suite 200, Minneapolis, MN 55401 USA',
     phoneDisplay: '+1 (555) 010-1001',
     phoneTel: '+15550101001',
+    building: {
+      name: 'US Headquarters',
+      floorPlanSrc: DEFAULT_FLOOR_PLAN_SRC,
+      footerBlurb: {
+        status:
+          'Production cells mostly green. Rack hall B within spec; weld East in planned maintenance.',
+        safety: 'Last floor walkthrough 06:00 CST · 0 open near-miss actions for this building.',
+        security: 'Perimeter logged · 14 badged entries in the last 4 hours.',
+        settings: 'Map layers and zone labels are demo data — swap in your CAD or BIM exports.',
+      },
+      zones: [
+        {
+          id: 'us-rack-b',
+          label: 'Rack hall B',
+          pct: { left: 54, top: 20, width: 26, height: 34 },
+          machinery: {
+            title: 'Rack hall B — integration & MES edge',
+            status: 'running',
+            lines: [
+              { k: 'Cell OEE', v: '91.2%' },
+              { k: 'Historian H-3', v: 'Sync OK · ~12 ms lag' },
+              { k: 'Power rail A', v: 'Stable · 48.1 Hz' },
+              { k: 'Ambient', v: '21.4 °C' },
+            ],
+            foot: 'Drill-down: bind OPC tags, torque traces, and CMMS work orders per rack row.',
+          },
+        },
+        {
+          id: 'us-weld-east',
+          label: 'Weld cell East',
+          pct: { left: 74, top: 36, width: 18, height: 24 },
+          machinery: {
+            title: 'Weld cell East — robots R-12 / R-13',
+            status: 'idle',
+            lines: [
+              { k: 'Mode', v: 'Tooling changeover (approved)' },
+              { k: 'Est. ready', v: '~18 min' },
+              { k: 'Last cycle drift', v: '+8% vs 7d avg' },
+            ],
+            foot: 'Open torque calibration checklist before restart sign-off.',
+          },
+        },
+      ],
+    },
   },
   {
     id: 'ie',
@@ -130,6 +184,47 @@ const GLOBAL_SITES = [
     address: 'Unit 3 Demo Business Park, 42 Placeholder Rd, Dublin 2, D02 XY00, Ireland',
     phoneDisplay: '+353 (0) 1 555 0102',
     phoneTel: '+35315550102',
+    building: {
+      name: 'Dublin Manufacturing Center',
+      floorPlanSrc: DEFAULT_FLOOR_PLAN_SRC,
+      footerBlurb: {
+        status: 'Fill line holding steady; packaging lane C trending above target takt.',
+        safety: 'Chemical store inspection due tomorrow · eyewash tested today.',
+        security: 'Visitor escort policy active · 3 contractors on floor.',
+        settings: 'EU data residency profile (demo) — align retention with DPA.',
+      },
+      zones: [
+        {
+          id: 'ie-fill',
+          label: 'Sterile fill suite',
+          pct: { left: 48, top: 24, width: 22, height: 30 },
+          machinery: {
+            title: 'Sterile fill suite — Lines F1–F2',
+            status: 'running',
+            lines: [
+              { k: 'Batch', v: 'S-12 (QA hold lifted)' },
+              { k: 'Room pressure', v: '+12 Pa vs corridor' },
+              { k: 'Particle count', v: 'Class ISO 7 · OK' },
+            ],
+            foot: 'Environmental logs roll to batch record automatically in production.',
+          },
+        },
+        {
+          id: 'ie-pack',
+          label: 'Packaging lane C',
+          pct: { left: 70, top: 44, width: 20, height: 22 },
+          machinery: {
+            title: 'Packaging lane C',
+            status: 'running',
+            lines: [
+              { k: 'Throughput', v: '412 units / hr' },
+              { k: 'Label verifier', v: '100% read rate (shift)' },
+            ],
+            foot: 'HENRY is correlating slower cycles with new hire shadowing at station 4.',
+          },
+        },
+      ],
+    },
   },
   {
     id: 'cr',
@@ -143,6 +238,32 @@ const GLOBAL_SITES = [
     address: 'Edificio Demo 12, Zona Ejemplo, San José 10101, Costa Rica',
     phoneDisplay: '+506 5550 0103',
     phoneTel: '+50655500103',
+    building: {
+      name: 'San José Assembly Hub',
+      floorPlanSrc: DEFAULT_FLOOR_PLAN_SRC,
+      footerBlurb: {
+        status: 'Regional hub: two cells in run, one idle for die swap.',
+        safety: 'Ergonomics audit scheduled next week.',
+        security: 'Night shift handover complete.',
+        settings: 'Spanish + English UI labels supported (demo).',
+      },
+      zones: [
+        {
+          id: 'cr-press',
+          label: 'Press cell 2',
+          pct: { left: 58, top: 28, width: 24, height: 28 },
+          machinery: {
+            title: 'Press cell 2 — tonnage & stroke',
+            status: 'alert',
+            lines: [
+              { k: 'Peak force', v: '4% below recipe (8 cycles)' },
+              { k: 'Ticket', v: 'ENG-4412 opened' },
+            ],
+            foot: 'Similar signature last month — worn die set suspected.',
+          },
+        },
+      ],
+    },
   },
   {
     id: 'il',
@@ -156,6 +277,32 @@ const GLOBAL_SITES = [
     address: '15 Mock Tech Park, Building B, Herzliya 4672501, Israel',
     phoneDisplay: '+972 55-501-0104',
     phoneTel: '+972555010104',
+    building: {
+      name: 'Herzliya R&D & light mfg',
+      floorPlanSrc: DEFAULT_FLOOR_PLAN_SRC,
+      footerBlurb: {
+        status: 'Prototype line idle; pilot build window Friday.',
+        safety: 'Laser enclosure interlocks tested.',
+        security: 'SCIF zone badge required beyond checkpoint 2 (demo).',
+        settings: 'Link Jira epics to floor assets when wired.',
+      },
+      zones: [
+        {
+          id: 'il-lab',
+          label: 'Pilot line',
+          pct: { left: 52, top: 30, width: 28, height: 32 },
+          machinery: {
+            title: 'Pilot line — build 0.9',
+            status: 'idle',
+            lines: [
+              { k: 'Next run', v: 'Fri 09:00 IDT' },
+              { k: 'Firmware', v: 'v2.4.1 staged on benches' },
+            ],
+            foot: 'HENRY will ingest test-stand CSVs and git build IDs in production.',
+          },
+        },
+      ],
+    },
   },
   {
     id: 'in',
@@ -169,6 +316,32 @@ const GLOBAL_SITES = [
     address: 'Floor 4, Sample IT Tower, Indiranagar, Bengaluru, Karnataka 560038, India',
     phoneDisplay: '+91 80 5550 0105',
     phoneTel: '+91805550105',
+    building: {
+      name: 'Bengaluru support & NOC',
+      floorPlanSrc: DEFAULT_FLOOR_PLAN_SRC,
+      footerBlurb: {
+        status: 'Remote monitoring for APAC plants · no local heavy assets in this demo.',
+        safety: 'Fire drill logged last quarter.',
+        security: '24/7 access control on floor 4.',
+        settings: 'Replace this map with your India floor when co-locating gear.',
+      },
+      zones: [
+        {
+          id: 'in-noc',
+          label: 'NOC / racks',
+          pct: { left: 56, top: 26, width: 30, height: 36 },
+          machinery: {
+            title: 'NOC — edge compute & VPN',
+            status: 'running',
+            lines: [
+              { k: 'Uplink', v: 'Redundant · 0 drops (24h)' },
+              { k: 'Tickets', v: '2 in queue (P3)' },
+            ],
+            foot: 'This view mirrors “inside machinery” for IT-heavy sites.',
+          },
+        },
+      ],
+    },
   },
   {
     id: 'my',
@@ -182,6 +355,31 @@ const GLOBAL_SITES = [
     address: 'TBD — demo site (address to be confirmed)',
     phoneDisplay: '+60 3-5550 0106',
     phoneTel: '+60355500106',
+    building: {
+      name: 'Kuala Lumpur — planned facility',
+      floorPlanSrc: DEFAULT_FLOOR_PLAN_SRC,
+      footerBlurb: {
+        status: 'Footprint TBD · using reference layout until CAD is uploaded.',
+        safety: '—',
+        security: '—',
+        settings: 'Assign building name, zones, and image per site from admin API.',
+      },
+      zones: [
+        {
+          id: 'my-placeholder',
+          label: 'Future production zone',
+          pct: { left: 50, top: 28, width: 32, height: 34 },
+          machinery: {
+            title: 'Placeholder zone',
+            status: 'idle',
+            lines: [
+              { k: 'Status', v: 'No assets commissioned' },
+            ],
+            foot: 'When the site goes live, define hotspots on the real floor plan.',
+          },
+        },
+      ],
+    },
   },
 ]
 
@@ -193,6 +391,119 @@ function SitePhoneIcon() {
         d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"
       />
     </svg>
+  )
+}
+
+function buildingMachineryToneClass(status) {
+  if (status === 'running') return 'client-building-machinery-badge--run'
+  if (status === 'alert') return 'client-building-machinery-badge--alert'
+  return 'client-building-machinery-badge--idle'
+}
+
+function BuildingSiteOverlay({ site, zoneId, panelTab, onClose, onSelectZone, onSelectTab }) {
+  const b = site?.building
+  if (!b) return null
+  const activeZone = zoneId ? b.zones.find((z) => z.id === zoneId) : null
+  const panelCopy = b.footerBlurb?.[panelTab] ?? '—'
+
+  return (
+    <div
+      className="client-building-overlay"
+      role="presentation"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
+      <div
+        className="client-building-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="client-building-title"
+      >
+        <div className="client-building-topbar">
+          <span className="client-building-local">Local time: {site.localTime}</span>
+          <h2 id="client-building-title" className="client-building-name">
+            {b.name}
+          </h2>
+          <button type="button" className="client-building-close" onClick={onClose} aria-label="Close building view">
+            ×
+          </button>
+        </div>
+
+        {activeZone ? (
+          <div className="client-building-machinery">
+            <button type="button" className="client-building-back" onClick={() => onSelectZone(null)}>
+              ← Floor plan
+            </button>
+            <div className="client-building-machinery-head">
+              <h3 className="client-building-machinery-title">{activeZone.machinery.title}</h3>
+              <span
+                className={`client-building-machinery-badge ${buildingMachineryToneClass(activeZone.machinery.status)}`}
+              >
+                {activeZone.machinery.status}
+              </span>
+            </div>
+            <dl className="client-building-machinery-metrics">
+              {activeZone.machinery.lines.map((row) => (
+                <div key={row.k} className="client-building-machinery-row">
+                  <dt>{row.k}</dt>
+                  <dd>{row.v}</dd>
+                </div>
+              ))}
+            </dl>
+            {activeZone.machinery.foot ? (
+              <p className="client-building-machinery-foot">{activeZone.machinery.foot}</p>
+            ) : null}
+          </div>
+        ) : (
+          <>
+            <div className="client-building-floor">
+              <div className="client-building-floor-inner">
+                <img
+                  className="client-building-floor-img"
+                  src={b.floorPlanSrc}
+                  alt={`Floor plan — ${b.name}`}
+                  draggable={false}
+                />
+                {b.zones.map((z) => (
+                  <button
+                    key={z.id}
+                    type="button"
+                    className="client-building-zone"
+                    style={{
+                      left: `${z.pct.left}%`,
+                      top: `${z.pct.top}%`,
+                      width: `${z.pct.width}%`,
+                      height: `${z.pct.height}%`,
+                    }}
+                    onClick={() => onSelectZone(z.id)}
+                    aria-label={`Open machinery view: ${z.label}`}
+                  >
+                    <span className="client-building-zone-ring" aria-hidden="true" />
+                    <span className="client-building-zone-label">{z.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <p className="client-building-hint">Tap a highlighted zone to open machinery / cell detail.</p>
+          </>
+        )}
+
+        <div className="client-building-footer">
+          {BUILDING_FOOTER_TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              className={`client-building-footer-btn${panelTab === t.id ? ' client-building-footer-btn--active' : ''}`}
+              onClick={() => onSelectTab(t.id)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <p className="client-building-footer-copy">{panelCopy}</p>
+      </div>
+    </div>
   )
 }
 
@@ -436,8 +747,24 @@ export default function ClientDashboard({ user, onSignOut }) {
   const [insightQuestion, setInsightQuestion] = useState('')
   const [searchQ, setSearchQ] = useState('')
   const [notifOpen, setNotifOpen] = useState(false)
+  const [buildingSiteId, setBuildingSiteId] = useState(null)
+  const [buildingZoneId, setBuildingZoneId] = useState(null)
+  const [buildingPanelTab, setBuildingPanelTab] = useState('status')
   const notifWrapRef = useRef(null)
   const chartUid = useId().replace(/:/g, '')
+
+  const buildingSite = buildingSiteId ? GLOBAL_SITES.find((s) => s.id === buildingSiteId) : null
+
+  const openBuilding = (site) => {
+    setBuildingSiteId(site.id)
+    setBuildingZoneId(null)
+    setBuildingPanelTab('status')
+  }
+
+  const closeBuilding = () => {
+    setBuildingSiteId(null)
+    setBuildingZoneId(null)
+  }
 
   useEffect(() => {
     setOnboard(loadOnboard(user.email))
@@ -464,6 +791,26 @@ export default function ClientDashboard({ user, onSignOut }) {
     const t = setTimeout(() => setToast(''), 3200)
     return () => clearTimeout(t)
   }, [toast])
+
+  useEffect(() => {
+    if (!buildingSiteId) return undefined
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKey = (e) => {
+      if (e.key !== 'Escape') return
+      e.preventDefault()
+      if (buildingZoneId) setBuildingZoneId(null)
+      else {
+        setBuildingSiteId(null)
+        setBuildingZoneId(null)
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = prevOverflow
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [buildingSiteId, buildingZoneId])
 
   const ctx = WORKSPACE
   const activeProductTitles = titlesForProductIds(user.products)
@@ -709,31 +1056,39 @@ export default function ClientDashboard({ user, onSignOut }) {
               <div className="client-sites-grid">
                 {GLOBAL_SITES.map((site) => (
                   <article key={site.id} className="client-site-card">
-                    <h3 className="client-site-country">{site.country}</h3>
-                    <div className="client-site-flag" aria-hidden="true" title={site.country}>
-                      <span className="client-site-flag-emoji">{site.flagEmoji}</span>
-                    </div>
-                    <p className="client-site-lead">
-                      {site.leadRole} — <strong>{site.leadName}</strong>
-                    </p>
-                    <dl className="client-site-metrics">
-                      <div>
-                        <dt>Local time</dt>
-                        <dd>{site.localTime}</dd>
+                    <button
+                      type="button"
+                      className="client-site-card-main"
+                      onClick={() => openBuilding(site)}
+                      aria-label={`Open building view for ${site.country}`}
+                    >
+                      <h3 className="client-site-country">{site.country}</h3>
+                      <div className="client-site-flag" aria-hidden="true" title={site.country}>
+                        <span className="client-site-flag-emoji">{site.flagEmoji}</span>
                       </div>
-                      <div>
-                        <dt>No. of active employees</dt>
-                        <dd>{site.employees != null ? site.employees : '—'}</dd>
-                      </div>
-                      <div>
-                        <dt>Operational efficiency</dt>
-                        <dd>{site.efficiency != null ? `${site.efficiency}%` : '—'}</dd>
-                      </div>
-                    </dl>
-                    <p className="client-site-address">
-                      <span className="client-site-address-label">Address</span>
-                      {site.address}
-                    </p>
+                      <p className="client-site-lead">
+                        {site.leadRole} — <strong>{site.leadName}</strong>
+                      </p>
+                      <dl className="client-site-metrics">
+                        <div>
+                          <dt>Local time</dt>
+                          <dd>{site.localTime}</dd>
+                        </div>
+                        <div>
+                          <dt>No. of active employees</dt>
+                          <dd>{site.employees != null ? site.employees : '—'}</dd>
+                        </div>
+                        <div>
+                          <dt>Operational efficiency</dt>
+                          <dd>{site.efficiency != null ? `${site.efficiency}%` : '—'}</dd>
+                        </div>
+                      </dl>
+                      <p className="client-site-address">
+                        <span className="client-site-address-label">Address</span>
+                        {site.address}
+                      </p>
+                      <span className="client-site-open-hint">Building view →</span>
+                    </button>
                     <a className="client-site-phone" href={`tel:${site.phoneTel}`}>
                       <SitePhoneIcon />
                       <span>{site.phoneDisplay}</span>
@@ -1363,6 +1718,17 @@ export default function ClientDashboard({ user, onSignOut }) {
           </footer>
         </main>
       </div>
+
+      {buildingSite?.building ? (
+        <BuildingSiteOverlay
+          site={buildingSite}
+          zoneId={buildingZoneId}
+          panelTab={buildingPanelTab}
+          onClose={closeBuilding}
+          onSelectZone={setBuildingZoneId}
+          onSelectTab={setBuildingPanelTab}
+        />
+      ) : null}
     </div>
   )
 }

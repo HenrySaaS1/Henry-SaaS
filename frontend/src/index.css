@@ -2505,6 +2505,378 @@ a {
   opacity: 0.85;
 }
 
+.client-site-card-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  text-align: inherit;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: background 0.12s ease;
+}
+
+.client-site-card-main:hover {
+  background: rgba(99, 102, 241, 0.06);
+}
+
+.client-site-card-main:focus-visible {
+  outline: 2px solid #4f46e5;
+  outline-offset: 2px;
+}
+
+.client-site-open-hint {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #c2410c;
+}
+
+/* Building view (per-site floor plan + machinery drill-down) */
+.client-building-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(4px);
+}
+
+.client-building-dialog {
+  width: min(100%, 44rem);
+  max-height: min(92vh, 52rem);
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 1.1rem 1.15rem;
+  border-radius: 16px;
+  background: linear-gradient(160deg, #ea580c 0%, #f97316 48%, #fb923c 100%);
+  box-shadow: 0 24px 64px rgba(194, 65, 12, 0.45);
+  color: #0f172a;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.client-building-topbar {
+  position: relative;
+  margin-bottom: 0.75rem;
+  padding: 0 2.75rem;
+  text-align: center;
+}
+
+.client-building-local {
+  position: absolute;
+  left: 0.15rem;
+  top: 50%;
+  transform: translateY(-50%);
+  max-width: 42%;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #0f172a;
+  text-align: left;
+  line-height: 1.25;
+}
+
+.client-building-name {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  text-align: center;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.client-building-close {
+  position: absolute;
+  right: 0.15rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2.25rem;
+  height: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #0f172a;
+  font-size: 1.35rem;
+  line-height: 1;
+  font-weight: 300;
+  cursor: pointer;
+  transition: background 0.12s ease, transform 0.12s ease;
+}
+
+.client-building-close:hover {
+  background: #fff;
+  transform: translateY(-50%) scale(1.04);
+}
+
+.client-building-floor {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.client-building-floor-inner {
+  position: relative;
+  width: 100%;
+  line-height: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #64748b;
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.12);
+}
+
+.client-building-floor-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  user-select: none;
+}
+
+.client-building-zone {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: rgba(239, 68, 68, 0.12);
+  cursor: pointer;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.client-building-zone:hover,
+.client-building-zone:focus-visible {
+  background: rgba(239, 68, 68, 0.22);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85);
+  z-index: 2;
+}
+
+.client-building-zone:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 1px;
+}
+
+.client-building-zone-ring {
+  position: absolute;
+  inset: 10%;
+  border: 3px solid rgba(220, 38, 38, 0.95);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: client-building-pulse 2.2s ease-in-out infinite;
+}
+
+@keyframes client-building-pulse {
+  0%,
+  100% {
+    transform: scale(0.92);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .client-building-zone-ring {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+.client-building-zone-label {
+  position: relative;
+  z-index: 1;
+  margin: 0 0 6%;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 6px;
+  max-width: 90%;
+  text-align: center;
+  line-height: 1.2;
+  pointer-events: none;
+}
+
+.client-building-hint {
+  margin: 0.45rem 0 0;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: rgba(15, 23, 42, 0.85);
+  text-align: center;
+}
+
+.client-building-footer {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.45rem;
+  margin-top: 0.65rem;
+}
+
+.client-building-footer-btn {
+  padding: 0.5rem 0.35rem;
+  border: none;
+  border-radius: 8px;
+  background: #fff;
+  color: #0f172a;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.client-building-footer-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.client-building-footer-btn--active {
+  box-shadow: 0 0 0 2px #0f172a;
+}
+
+.client-building-footer-copy {
+  margin: 0.5rem 0 0;
+  font-size: 0.68rem;
+  line-height: 1.45;
+  color: rgba(15, 23, 42, 0.9);
+  text-align: center;
+}
+
+.client-building-machinery {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.5rem 0.35rem 0.25rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
+}
+
+.client-building-back {
+  display: inline-flex;
+  margin-bottom: 0.65rem;
+  padding: 0.25rem 0;
+  border: none;
+  background: transparent;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #c2410c;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.client-building-machinery-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.client-building-machinery-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.3;
+  flex: 1;
+  min-width: 12rem;
+}
+
+.client-building-machinery-badge {
+  flex-shrink: 0;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.client-building-machinery-badge--run {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.client-building-machinery-badge--idle {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.client-building-machinery-badge--alert {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.client-building-machinery-metrics {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.client-building-machinery-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.client-building-machinery-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.client-building-machinery-row dt {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.client-building-machinery-row dd {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #0f172a;
+  text-align: right;
+}
+
+.client-building-machinery-foot {
+  margin: 0.85rem 0 0;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: #475569;
+}
+
 .client-meta-strip {
   display: flex;
   flex-wrap: wrap;
