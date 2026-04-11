@@ -103,6 +103,100 @@ const REPORT_RANGE_PRESETS = [
   { id: 'mtd', label: 'Month to date' },
 ]
 
+/** Demo global sites — replace with API data for your tenant. */
+const GLOBAL_SITES = [
+  {
+    id: 'us',
+    country: 'United States',
+    flagEmoji: '🇺🇸',
+    leadRole: 'Site Director',
+    leadName: 'Mark Stockhowe',
+    localTime: 'CST',
+    employees: 120,
+    efficiency: 88,
+    address: '7418 Washington Ave S, Eden Prairie, MN 55344 USA',
+    phoneDisplay: '+1 (952) 941-0475',
+    phoneTel: '+19529410475',
+  },
+  {
+    id: 'ie',
+    country: 'Ireland',
+    flagEmoji: '🇮🇪',
+    leadRole: 'Site Lead',
+    leadName: 'Kevin Conlon',
+    localTime: 'Irish Standard Time',
+    employees: 78,
+    efficiency: 84,
+    address: 'Unit 1 Cherrywood Business Park, Little Island, Cork, Ireland T45 XP70',
+    phoneDisplay: '+353 (0) 21 242 7228',
+    phoneTel: '+353212427228',
+  },
+  {
+    id: 'cr',
+    country: 'Costa Rica',
+    flagEmoji: '🇨🇷',
+    leadRole: 'Site Lead',
+    leadName: 'Miguel Zaballa',
+    localTime: 'CST',
+    employees: 56,
+    efficiency: 78,
+    address: 'The Greenpark Free Zone San Antonio, Alajuela, Costa Rica',
+    phoneDisplay: '+1 (952) 941-0475',
+    phoneTel: '+19529410475',
+  },
+  {
+    id: 'il',
+    country: 'Israel',
+    flagEmoji: '🇮🇱',
+    leadRole: 'Site Lead',
+    leadName: 'Itamar Haran',
+    localTime: 'Israel Daylight Time',
+    employees: 34,
+    efficiency: 75,
+    address: '20 Alon ha-Tavor St, Building 5, Caesarea, Israel',
+    phoneDisplay: '+972 549 985610',
+    phoneTel: '+972549985610',
+  },
+  {
+    id: 'in',
+    country: 'India',
+    flagEmoji: '🇮🇳',
+    leadRole: 'Site Lead',
+    leadName: 'Deepak Teja',
+    localTime: 'Indian Standard Time',
+    employees: 12,
+    efficiency: 82,
+    address:
+      'Nsl Centrum Mall, Kukatpally Housing Board Colony, KPHB Phase 2, Kukatpally, Hyderabad, Telangana 500085',
+    phoneDisplay: '+1 (952) 941-0475',
+    phoneTel: '+19529410475',
+  },
+  {
+    id: 'my',
+    country: 'Malaysia',
+    flagEmoji: '🇲🇾',
+    leadRole: 'Site Lead',
+    leadName: 'KS',
+    localTime: 'Malaysia Time',
+    employees: null,
+    efficiency: null,
+    address: 'TBD',
+    phoneDisplay: '+1 (952) 941-0475',
+    phoneTel: '+19529410475',
+  },
+]
+
+function SitePhoneIcon() {
+  return (
+    <svg className="client-site-phone-icon" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"
+      />
+    </svg>
+  )
+}
+
 function displayNameFromEmail(email) {
   const local = String(email).split('@')[0]?.replace(/[.+_]/g, ' ').trim() || 'there'
   return local
@@ -696,6 +790,52 @@ export default function ClientDashboard({ user, onSignOut }) {
                   </div>
                 ))}
               </div>
+
+              <section className="client-sites-section" aria-labelledby="global-sites-title">
+                <div className="client-sites-section-head">
+                  <h2 id="global-sites-title" className="client-sites-section-title">
+                    {user.company}
+                  </h2>
+                  <p className="client-sites-section-sub">
+                    Global footprint — site leadership, local time, headcount, and efficiency by region.
+                  </p>
+                </div>
+                <div className="client-sites-grid">
+                  {GLOBAL_SITES.map((site) => (
+                    <article key={site.id} className="client-site-card">
+                      <h3 className="client-site-country">{site.country}</h3>
+                      <div className="client-site-flag" aria-hidden="true" title={site.country}>
+                        <span className="client-site-flag-emoji">{site.flagEmoji}</span>
+                      </div>
+                      <p className="client-site-lead">
+                        {site.leadRole} — <strong>{site.leadName}</strong>
+                      </p>
+                      <dl className="client-site-metrics">
+                        <div>
+                          <dt>Local time</dt>
+                          <dd>{site.localTime}</dd>
+                        </div>
+                        <div>
+                          <dt>No. of active employees</dt>
+                          <dd>{site.employees != null ? site.employees : '—'}</dd>
+                        </div>
+                        <div>
+                          <dt>Operational efficiency</dt>
+                          <dd>{site.efficiency != null ? `${site.efficiency}%` : '—'}</dd>
+                        </div>
+                      </dl>
+                      <p className="client-site-address">
+                        <span className="client-site-address-label">Address</span>
+                        {site.address}
+                      </p>
+                      <a className="client-site-phone" href={`tel:${site.phoneTel}`}>
+                        <SitePhoneIcon />
+                        <span>{site.phoneDisplay}</span>
+                      </a>
+                    </article>
+                  ))}
+                </div>
+              </section>
 
               <div className="client-line-snapshot" aria-label="Line health snapshot">
                 {PRODUCTION_LINES.slice(0, 3).map((line) => (
