@@ -70,8 +70,10 @@ app.get('/api/auth/check-email', async (req, res) => {
   try {
     const existing = await prisma.user.findUnique({ where: { email } })
     res.json({ available: !existing })
-  } catch {
-    res.status(500).json({ ok: false, message: 'Could not verify email.' })
+  } catch (err) {
+    // DB unreachable (e.g. local Postgres not running): don't block signup; register will surface errors.
+    console.error('[check-email]', err)
+    res.json({ available: true })
   }
 })
 

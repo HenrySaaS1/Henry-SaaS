@@ -391,17 +391,6 @@ function App() {
         ? [...PLAN_REGISTRATION_DEFAULTS[signupFromPlan].productIds]
         : [...DEFAULT_PRODUCT_IDS]
     try {
-      const { available } = await apiJson(
-        `/api/auth/check-email?email=${encodeURIComponent(emailKey)}`,
-        { token: null },
-      )
-      if (!available) {
-        setSignupStatus('This email already has an account. Use Sign in below.')
-        setAuthMode('signin')
-        setSignupFromPlan(null)
-        setSignupForm((c) => ({ ...c, email: emailKey, password: '', confirmPassword: '' }))
-        return
-      }
       const body = {
         email: emailKey,
         password: signupForm.password,
